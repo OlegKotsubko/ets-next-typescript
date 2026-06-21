@@ -16,6 +16,11 @@ preview→program switcher, like vMix/ATEM. They also need **full-screen splash
 titles** (intermission, "starting soon", full-screen replay) to behave specially:
 taking a full-screen title should wipe the stage so it lands clean.
 
+They also need **reload recovery**: refreshing the `/preview` or `/air` window
+(an OBS source refresh, or the operator's preview monitor) must restore the
+current set of titles, not come back blank. The same applies to reloading the
+admin control tab — its live/staged state must come back.
+
 ### Motivating example
 
 A full-screen title is live on Air. The operator stages a *different* full-screen
@@ -85,27 +90,28 @@ already present in the UI as the **"Layer"** dropdown in the Add Template modal
 
 ## Architecture — keep the bus dumb
 
-Preserve the existing philosophy: **the bus is a dumb relay; on-air state is
-transient and client-side** (`docs/rundowns.md` "broadcast event bus",
-`docs/preview-air.md`).
+Adjust the existing philosophy slightly: the bus stays an **in-process relay**,
+but it now also **remembers the current composition per `(rundownId, channel)`**
+so a reloaded window can be re-hydrated. State still lives only in process memory
+(never the DB) — see [Reload recovery](#reload-recovery--in-memory-snapshot).
 
-### Conductor: the admin control page
+### Source of truth: the SSE streams, snapshot-backed
 
-The rundown editor holds the two compositions in the **`editor` Redux slice**
-(ephemeral UI state — exactly its purpose, per `docs/state-management.md`):
+Because the bus replays its current set to every new subscriber (below), the
+**two SSE streams are themselves the source of truth** for what is staged and
+what is live. The admin control page derives both sets straight from them:
 
 ```ts
-// store/slices/editorSlice.ts — replaces single onAirItemId / selectedItemId model
-interface EditorState {
-  previewSet: string[];   // staged itemIds, ordered
-  airSet: string[];       // live itemIds, ordered
-  // selectedItemId stays for the settings form
-}
+const live   = useTitleStream(rundownId, 'air');      // LiveTitle[] — snapshot-replayed on connect
+const staged = useTitleStream(rundownId, 'preview');  // LiveTitle[]
+// a widget is "live" if its itemId is in `live`, "staged" if in `staged`
 ```
 
-`onAirItemId: string | null` (the old single-highlight mirror) is replaced by
-`airSet: string[]`. The list UI highlights every `itemId` in `airSet`, and marks
-every `itemId` in `previewSet`.
+This means **a reloaded admin tab recovers its highlighting and Hide-Air state
+for free** — it just re-subscribes and receives the snapshot. The `editor` Redux
+slice therefore shrinks to `{ selectedItemId }` only; `previewSet`/`airSet` are
+**derived from SSE, not stored in Redux** (one source of truth, no drift). The
+old `onAirItemId` single-highlight field is removed.
 
 ### The rule lives server-side, computed once, in a take endpoint
 
@@ -114,22 +120,24 @@ renderer:
 
 ```
 POST /api/projects/[projectId]/rundowns/[rundownId]/take
-body: { stagedItemIds: string[], liveItemIds: string[] }
+body: { stagedItemIds: string[] }
 ```
 
 The handler:
-1. Loads the staged items; looks up each title's `settings.title_is_full_screen`
+1. Reads the **currently-live itemIds from the bus's air snapshot** (not from the
+   request body — the server owns this now).
+2. Loads the staged items; looks up each title's `settings.title_is_full_screen`
    via the title registry.
-2. If any staged item is full-screen → emit `hide` on the **air** channel for
-   every `liveItemId`.
-3. Emit `show` on the **air** channel for every staged item (carrying
-   `titleKey`, `layer`, validated `data`).
-4. Returns the **new Air set** (the authoritative list of live itemIds) so the
-   admin updates `editor.airSet` from the response rather than guessing.
+3. If any staged item is full-screen → emit `hide` on the **air** channel for
+   every currently-live item.
+4. Emit `show` on the **air** channel for every staged item (carrying
+   `titleKey`, `layer`, `position`, validated `data`).
+5. Returns the **new Air set** for convenience, though the admin doesn't depend on
+   it — its `air` SSE stream reflects the change anyway.
 
-`liveItemIds` comes from the conductor's own `airSet`; since on-air state is
-transient and client-owned, the client is already the source of truth for it and
-simply reports it to the server for the computation.
+Sourcing `liveItemIds` from the bus snapshot (rather than a client-sent list)
+means a take is **correct even right after an admin reload**, when the client has
+no local memory of what was live.
 
 Supporting endpoints (per-item, mirror the existing `/air` route style):
 
@@ -141,7 +149,7 @@ POST   /api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/hide-air   
 
 ### Bus & event shape
 
-The bus stays unchanged in topology. The event shape gains only `layer`:
+The event shape gains only `layer`/`position` — no new event *types*:
 
 ```ts
 type BroadcastEvent =
@@ -150,7 +158,35 @@ type BroadcastEvent =
   | { type: 'update'; rundownId: string; itemId: string; layer: number; position: number; data: unknown };
 ```
 
-Events are already keyed by `itemId`; multi-layer needs no new event *types*.
+The bus gains a **stateful snapshot**: alongside its subscriber registry it keeps,
+per `(rundownId, channel)`, a `Map<itemId, LiveTitle>` that every `publish`
+mutates the same way the client reducer does (`show` sets, `hide` deletes,
+`update` merges). It exposes `getSnapshot(rundownId, channel): LiveTitle[]`. This
+is the same module memory the subscribers already live in — no new storage, no DB.
+
+### Reload recovery — in-memory snapshot
+
+The SSE **stream route** replays the snapshot to every newly-connecting client
+before streaming live events:
+
+```ts
+// app/api/broadcast/[rundownId]/stream/route.ts (Edge) — on connect:
+for (const t of getSnapshot(rundownId, channel)) {
+  controller.enqueue(encode({ type: 'show', ...t }));   // rebuild the client's set
+}
+const unsub = subscribe(rundownId, channel, (e) => controller.enqueue(encode(e)));
+```
+
+So reloading `/preview` or `/air` (or the admin tab) re-subscribes, immediately
+receives the current set as `show` events, and the client reducer rebuilds
+exactly what was on screen. Snapshot-replayed titles render in their resting
+state; replaying their `title_stinger_in` on reconnect is acceptable for MVP.
+
+**Durability boundary:** the snapshot lives in process memory, so it survives a
+*window/tab reload* (the instance stays warm while any client is connected) but
+**not** a full server restart / serverless cold-recycle with zero connections —
+the same single-instance limit the bus already has. Persisting composition to the
+DB (to survive a redeploy mid-show) is explicitly out of scope.
 
 ### Renderers become a set-reducer
 
@@ -182,11 +218,16 @@ Operator toggles Preview on item A
   → admin marks A previewed
 
 Operator toggles Preview on item B (full-screen), then presses AIR
-  → POST .../take { stagedItemIds: [A, B], liveItemIds: [X] }
-  → server: B is full-screen → hide X on air; show A, show B on air
+  → POST .../take { stagedItemIds: [A, B] }
+  → server reads air snapshot → live = [X]
+  → B is full-screen → hide X on air; show A, show B on air; air snapshot = {A,B}
   → /air EventSource → reducer: delete X, add A, add B → renders {A,B} by layer
-  → response { airSet: [A, B] } → admin sets editor.airSet = [A, B]
+  → admin's own air SSE reflects {A,B} → widgets A,B marked live
   → Preview set unchanged (A, B still staged)
+
+Operator reloads the /air window (OBS refresh)
+  → new EventSource → stream route replays air snapshot {A,B} as show events
+  → reducer rebuilds {A,B} → renders the same stack, nothing lost
 ```
 
 ## What changes vs. the current docs
@@ -198,28 +239,30 @@ Operator toggles Preview on item B (full-screen), then presses AIR
   set model; the "Preview vs Air channels" section updated (preview = staging set,
   air = live set; AIR no longer mirrors to the preview channel — Preview is its
   own composed bus).
-- `docs/state-management.md` — `editor` slice gains `previewSet`/`airSet`,
-  replacing `onAirItemId`.
+- `docs/state-management.md` — `editor` slice shrinks to `{ selectedItemId }`;
+  `previewSet`/`airSet` are derived from the two SSE streams, replacing
+  `onAirItemId`.
+- `docs/rundowns.md` / `docs/preview-air.md` — document the **stateful bus
+  snapshot** and **replay-on-connect** in the SSE stream route.
 - `docs/roadmap.md` — move "multi on-air titles per rundown" out of the
   out-of-scope list (the full multi-*channel* MIDI routing work can stay future).
 - `docs/database.md` — note the `rundown_items.layer` column + its migration.
 
 ## Constraints carried forward
 
-- **Single-server pub/sub caveat** still applies (`docs/rundowns.md`). The two
-  compositions are transient and client-held; an admin tab refresh loses
-  `previewSet`/`airSet` (the renderers keep drawing what they last received, but
-  the conductor can no longer issue correct per-item hides until re-composed).
-  Acceptable for MVP; documented. A future snapshot-on-connect mechanism would
-  fix late-joiner and refresh gaps but is out of scope.
+- **Single-server pub/sub caveat** still applies (`docs/rundowns.md`). The bus
+  snapshot lives in process memory: it survives window/tab reloads while the
+  instance stays warm, but a full server restart / zero-connection cold-recycle
+  loses it. Surviving a redeploy mid-show would require DB persistence — out of
+  scope.
 - **Edge runtime** for SSE streaming routes only; the take/preview/hide-air route
   handlers run on Node (registry + DB access), like the existing `/air` route.
 
 ## Out of scope (this design)
 
 - "Clear all / panic" control (fast-follow).
-- Snapshot-on-connect / state replay for late-joining OBS sources or admin
-  refresh recovery.
+- **DB-persisted** composition (surviving a server restart / redeploy mid-show).
+  In-memory snapshot-on-connect (window-reload recovery) **is** in scope.
 - Transition animations between stacked titles; timed/scheduled takes.
 - Multi-*channel* rundowns (separate independent AIR buses); this design is a
   single Air set with z-layering, not multiple channels.
