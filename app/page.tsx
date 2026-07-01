@@ -1,3 +1,7 @@
 export default function Home() {
-  return <main>ETS base app</main>;
+  return (
+    <main>
+      ETS base app
+    </main>
+  )
 }
