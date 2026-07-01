@@ -297,10 +297,10 @@ git commit -m "feat(db): rundowns + rundown_items tables with project_id isolati
 Run: `npm run db:generate`
 Expected: creates `db/migrations/0000_<slug>.sql` and `db/migrations/meta/`. The SQL contains `CREATE TYPE "public"."project_mode"`, `CREATE TABLE "projects"`, `CREATE TABLE "rundowns"`, `CREATE TABLE "rundown_items"`, plus the two indexes and the FK constraints.
 
-Confirm quickly:
+Confirm quickly (drizzle-kit emits `CREATE TABLE IF NOT EXISTS`):
 
 ```bash
-grep -riE 'create table "(projects|rundowns|rundown_items)"' db/migrations
+grep -riE 'create table (if not exists )?"(projects|rundowns|rundown_items)"' db/migrations
 grep -ri 'create type "public"."project_mode"' db/migrations
 ```
 
@@ -340,9 +340,10 @@ const sql = readdirSync(dir)
 
 describe('committed migrations', () => {
   it('create all three tables and the project_mode enum', () => {
-    expect(sql).toMatch(/create table "projects"/)
-    expect(sql).toMatch(/create table "rundowns"/)
-    expect(sql).toMatch(/create table "rundown_items"/)
+    // drizzle-kit emits `CREATE TABLE IF NOT EXISTS "<name>"`.
+    expect(sql).toMatch(/create table (if not exists )?"projects"/)
+    expect(sql).toMatch(/create table (if not exists )?"rundowns"/)
+    expect(sql).toMatch(/create table (if not exists )?"rundown_items"/)
     expect(sql).toMatch(/create type "public"\."project_mode"/)
   })
   it('seed the singleton project at SEED_PROJECT_ID', () => {
