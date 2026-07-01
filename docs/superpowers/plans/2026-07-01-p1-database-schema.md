@@ -146,8 +146,8 @@ export const SEED_PROJECT_ID = '00000000-0000-0000-0000-000000000001'
 import { config } from 'dotenv'
 import { defineConfig } from 'drizzle-kit'
 
-// drizzle-kit does not auto-load .env.local; load it explicitly.
-config({ path: '.env.local' })
+// drizzle-kit does not auto-load env files; load them explicitly (.env.local wins over .env).
+config({ path: ['.env.local', '.env'] })
 
 export default defineConfig({
   schema: './db/schema.ts',
@@ -385,7 +385,7 @@ git commit -m "feat(db): generate DDL migration + seed singleton project"
 import { describe, it, expect } from 'vitest'
 import { config } from 'dotenv'
 
-config({ path: '.env.local' })
+config({ path: ['.env.local', '.env'] })
 const hasDb = Boolean(process.env.DATABASE_URL)
 
 // Requires a migrated + seeded Neon branch. Skipped when DATABASE_URL is unset.

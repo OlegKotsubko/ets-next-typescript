@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { config } from 'dotenv'
 
-config({ path: '.env.local' })
+config({ path: ['.env.local', '.env'] })
 const hasDb = Boolean(process.env.DATABASE_URL)
 
 // Requires a migrated + seeded Neon branch. Skipped when DATABASE_URL is unset.
