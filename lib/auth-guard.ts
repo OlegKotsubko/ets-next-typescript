@@ -2,7 +2,7 @@ const PROTECTED_PREFIXES = ['/admin', '/api/projects']
 
 export type GuardDecision = 'allow' | 'redirect-login' | 'unauthorized'
 
-// Optimistic check: middleware only sees whether the session cookie EXISTS.
+// Optimistic check: proxy only sees whether the session cookie EXISTS.
 // Real validation is auth.api.getSession server-side in every protected
 // page / route handler (see docs/auth.md).
 export function guardRequest(pathname: string, hasSessionCookie: boolean): GuardDecision {
