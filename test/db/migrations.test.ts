@@ -22,4 +22,13 @@ describe('committed migrations', () => {
     expect(sql).toContain('insert into "projects"')
     expect(sql).toContain(SEED_PROJECT_ID.toLowerCase())
   })
+  it('create the four better-auth tables', () => {
+    expect(sql).toMatch(/create table (if not exists )?"users"/)
+    expect(sql).toMatch(/create table (if not exists )?"sessions"/)
+    expect(sql).toMatch(/create table (if not exists )?"accounts"/)
+    expect(sql).toMatch(/create table (if not exists )?"verifications"/)
+  })
+  it('add the rundowns.owner_id -> users.id foreign key', () => {
+    expect(sql).toMatch(/alter table "rundowns" add constraint "rundowns_owner_id_users_id_fk"/)
+  })
 })
