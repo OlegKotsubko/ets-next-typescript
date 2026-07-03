@@ -7,11 +7,11 @@ export const projectMode = pgEnum('project_mode', ['team_vs_team', 'player_vs_pl
 
 export const projects = pgTable('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(),                 // project_name
-  mode: projectMode('mode').notNull(),          // project_mode
-  label: text('label').notNull(),               // project_label — overlay-package folder under projects/
-  pictureUrl: text('picture_url'),              // project_picture
-  eventDate: date('event_date'),                // project_date
+  name: text('name').notNull(), // project_name
+  mode: projectMode('mode').notNull(), // project_mode
+  label: text('label').notNull(), // project_label — overlay-package folder under projects/
+  pictureUrl: text('picture_url'), // project_picture
+  eventDate: date('event_date'), // project_date
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
@@ -20,9 +20,9 @@ export const projects = pgTable('projects', {
 export const createProjectSchema = z.object({
   name: z.string().min(1).max(120),
   mode: z.enum(['team_vs_team', 'player_vs_player']),
-  label: z.string().min(1),                     // validated against the live projects/ scan at the API layer (P6)
+  label: z.string().min(1), // validated against the live projects/ scan at the API layer (P6)
   pictureUrl: z.string().url().optional(),
-  eventDate: z.string().date().optional(),      // yyyy-mm-dd
+  eventDate: z.string().date().optional(), // yyyy-mm-dd
 })
 
 // --- better-auth core tables (drizzleAdapter usePlural: true) ---------------
@@ -31,7 +31,7 @@ export const createProjectSchema = z.object({
 // `npx @better-auth/cli generate` output.
 
 export const users = pgTable('users', {
-  id: text('id').primaryKey(),                  // better-auth generates text ids
+  id: text('id').primaryKey(), // better-auth generates text ids
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
@@ -56,7 +56,7 @@ export const sessions = pgTable('sessions', {
 export const accounts = pgTable('accounts', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
-  providerId: text('provider_id').notNull(),    // 'credential' for email+password
+  providerId: text('provider_id').notNull(), // 'credential' for email+password
   userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -66,7 +66,7 @@ export const accounts = pgTable('accounts', {
   accessTokenExpiresAt: timestamp('access_token_expires_at'),
   refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
   scope: text('scope'),
-  password: text('password'),                   // scrypt hash for email+password
+  password: text('password'), // scrypt hash for email+password
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
 }, (t) => [index('accounts_user_idx').on(t.userId)])
@@ -97,11 +97,11 @@ export const rundownItems = pgTable('rundown_items', {
   rundownId: uuid('rundown_id')
     .notNull()
     .references(() => rundowns.id, { onDelete: 'cascade' }),
-  projectId: uuid('project_id')                 // denormalized for direct project-scoped filtering
+  projectId: uuid('project_id') // denormalized for direct project-scoped filtering
     .notNull()
     .references(() => projects.id, { onDelete: 'cascade' }),
-  titleKey: text('title_key').notNull(),        // folder under projects/<label>/titles/
-  label: text('label'),                         // operator-facing display label (Add Template modal)
+  titleKey: text('title_key').notNull(), // folder under projects/<label>/titles/
+  label: text('label'), // operator-facing display label (Add Template modal)
   position: integer('position').notNull(),
-  data: jsonb('data').$type<Record<string, unknown>>().notNull(),  // validated against the title's model.ts
+  data: jsonb('data').$type<Record<string, unknown>>().notNull(), // validated against the title's model.ts
 }, (t) => [index('rundown_items_rundown_idx').on(t.rundownId, t.position)])
