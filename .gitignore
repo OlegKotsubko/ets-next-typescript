@@ -31,3 +31,6 @@ next-env.d.ts
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Derived: synced from projects/*/{assets,styles}
+public/projects/
