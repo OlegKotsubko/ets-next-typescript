@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run titles:generate",
     "build": "next build",
+    "prebuild": "npm run titles:generate",
     "start": "next start",
+    "titles:generate": "tsx scripts/generate-title-registry.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
