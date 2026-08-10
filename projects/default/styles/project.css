@@ -1,0 +1,12 @@
+/* Brand surface for the package. Re-skinning a project means editing this file,
+   not the titles. font-display: block — never `swap` in broadcast, or frames
+   paint with a fallback font. Drop .woff2 files in assets/fonts/ and point the
+   @font-face src at /projects/default/assets/fonts/<file>.woff2. */
+:root {
+  --color-primary: #ff4d2e;
+  --color-secondary: rgb(12 14 20 / 90%);
+  --color-accent: #7fd1ff;
+  --color-fg: #ffffff;
+  --font-display: 'DefaultDisplay', system-ui, sans-serif;
+  --font-body: 'DefaultBody', system-ui, sans-serif;
+}
