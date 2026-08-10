@@ -14,14 +14,33 @@ This document only sequences it.
 |---|---|---|
 | P0 scaffold | ✅ done | Next **16** (not 15 — `proxy.ts` needs it), React 19, TS, Vitest, ESLint flat config, RTK store, MUI theme, SCSS |
 | P1 database | ✅ done | `db/schema.ts` + migrations `0000`, `0001`, `0002` |
-| P2 auth | ✅ done | `lib/auth.ts`, `/login`, `proxy.ts` guard, `scripts/create-user.ts` |
-| P3 titles | ⬜ next | — |
+| P2 auth | 🟡 **partial** | Tasks 1–4 only — see below |
+| P3 titles | ⬜ | — |
 | P4 bus + SSE | ⬜ | — |
 | P5a admin shell | ⬜ | — |
 | P5b controller | ⬜ | already planned (14 tasks) |
 | P6 data CRUD · P7 deploy | ⬜ | — |
 
-Branch `p2-auth` @ `8d16632`. **Everything from P3 down is unbuilt.**
+Branch `p2-auth` @ `8d16632`; 31 tests passing. **Everything from P3 down is unbuilt.**
+
+### P2 is unfinished — finish it before P3
+
+`docs/superpowers/plans/2026-07-03-p2-auth.md` has 9 tasks; execution stopped
+after Task 4. Verified against the filesystem (the plan's checkboxes were never
+ticked, so they are not a reliable signal):
+
+| P2 task | State | Evidence |
+|---|---|---|
+| 1–3 auth schema, `lib/auth.ts`, `lib/auth-guard.ts` | ✅ | `buildAuthOptions()` + `auth` exported; `guardRequest()` exported |
+| 4 Next 16 upgrade + `proxy.ts` | ✅ | `next@^16.2.10`; `proxy.ts` at repo root |
+| **5 `/login` page** | ❌ | no `app/login/`; `react-hook-form` + `@hookform/resolvers` **not installed** |
+| **6 protected `/admin` placeholder** | ❌ | no `app/admin/` |
+| **7 `scripts/create-user.ts`** | ❌ | no `scripts/` directory; `tsx` **not installed** |
+| **8 guarded e2e auth round-trip** | ❌ | no such test |
+| **9 doc sync** | ❌ | `CLAUDE.md` still says `middleware.ts` |
+
+Consequence: **there is no way to log in and no way to create a user.** The guard
+and the auth API exist, but nothing exercises them. Resume that plan at Task 5.
 
 > ## Revision note (2026-06-21, amended 2026-08-10)
 >
@@ -91,11 +110,13 @@ below can be built, tested, and committed before the next begins.
 
 **Plan:** `docs/superpowers/plans/2026-07-01-p1-database-schema.md` (executed).
 
-### P2 — Auth ✅ done
-**Delivered:** login, sessions, protected routes.
-- `lib/auth.ts` (better-auth + Drizzle adapter, `usePlural: true`),
-  `lib/auth-client.ts`, `app/api/auth/[...all]/route.ts`, `/login` (RHF +
-  `zodResolver`), `scripts/create-user.ts`.
+### P2 — Auth 🟡 partial (resume at Task 5)
+**Goal:** login, sessions, protected routes.
+- ✅ `lib/auth.ts` (better-auth + Drizzle adapter, `usePlural: true`,
+  `disableSignUp: true` via `buildAuthOptions()`), `lib/auth-client.ts`,
+  `app/api/auth/[...all]/route.ts`, `lib/auth-guard.ts`.
+- ❌ **Still owed:** `/login` (RHF + `zodResolver`), the protected `/admin`
+  placeholder, `scripts/create-user.ts`, the e2e round-trip, and the doc sync.
 - Route guard is **`proxy.ts`**, not `middleware.ts` — Next 15.5 renamed it, and
   it only registers on Next 16. It gates `/admin/*` and `/api/projects/*` via an
   optimistic session-cookie check. `CLAUDE.md`'s route map still says
@@ -104,7 +125,7 @@ below can be built, tested, and committed before the next begins.
 
 **Plan:** `docs/superpowers/plans/2026-07-03-p2-auth.md` (executed).
 
-### P3 — Title system (three-file contract + shared models) ⬜ **next**
+### P3 — Title system (three-file contract + shared models) ⬜
 **Delivers:** the overlay-package + title contract and a working example title.
 - **`models/<TitleType>.ts`** — the shared, reusable contract layer from the
   title-contract spec: exported Zod fields **and** the title's declared
@@ -207,8 +228,8 @@ MIDI Remote** plan (the existing one is stale — see its banner). Plans are wri
 **one at a time**: write P<n> → execute → write P<n+1>, so each plan reflects what
 the previous one actually produced.
 
-- **Build order:** ~~P0 → P1 → P2~~ (done) → **P3** → P4 → P5a → P5b → P6 → P7 →
-  MIDI feature.
+- **Build order:** ~~P0 → P1~~ (done) → **P2 Tasks 5–9** (resume) → P3 → P4 →
+  P5a → P5b → P6 → P7 → MIDI feature.
 - **Remaining migrations:** exactly two more are expected —
   `rundown_items.layer` (multi-layer plan, Task 1) and the 3 MIDI collaboration
   tables (MIDI plan). P3, P4, and P5a are migration-free.
