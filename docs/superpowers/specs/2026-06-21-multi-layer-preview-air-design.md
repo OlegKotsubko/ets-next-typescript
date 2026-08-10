@@ -142,27 +142,45 @@ no local memory of what was live.
 Supporting endpoints (per-item, mirror the existing `/air` route style):
 
 ```
-POST   /api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/preview   → show on preview channel, add to previewSet
-DELETE /api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/preview   → hide on preview channel, remove from previewSet
-POST   /api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/hide-air   → hide on air channel, remove from airSet
+POST   .../rundowns/[rundownId]/items/[itemId]/preview    → show on preview channel (stage)
+DELETE .../rundowns/[rundownId]/items/[itemId]/preview    → hide on preview channel (unstage)
+POST   .../rundowns/[rundownId]/items/[itemId]/hide-air   → hide on air channel
+POST   .../rundowns/[rundownId]/items/[itemId]/update     → resend current data to BOTH channels
+POST   .../rundowns/[rundownId]/items/[itemId]/command    → command event on one channel
 ```
+
+**A per-item `air` action is a single-item take** — it calls `/take` with
+`stagedItemIds: [itemId]` rather than introducing a second route. The full-screen
+rule therefore applies identically whether the operator takes one item (a thread
+widget button or a MIDI note) or the whole staged set (the master AIR button);
+`computeTake` remains the only place that rule lives.
 
 ### Bus & event shape
 
-The event shape gains only `layer`/`position` — no new event *types*:
+The event shape gains `layer`/`position`, plus a `command` variant for title-declared
+actions (see the [title contract spec](./2026-06-21-title-contract-and-thread-widgets-design.md)):
 
 ```ts
 type BroadcastEvent =
-  | { type: 'show';   rundownId: string; itemId: string; titleKey: string; layer: number; position: number; data: unknown }
-  | { type: 'hide';   rundownId: string; itemId: string }
-  | { type: 'update'; rundownId: string; itemId: string; layer: number; position: number; data: unknown };
+  | { type: 'show';    itemId: string; titleKey: string; layer: number; position: number; data: unknown }
+  | { type: 'hide';    itemId: string }
+  | { type: 'update';  itemId: string; layer: number; position: number; data: unknown }
+  | { type: 'command'; itemId: string; action: string; payload?: unknown };
 ```
+
+`publish(rundownId, channel, event)` takes the rundown and channel as arguments, so
+they do not repeat on the event itself.
 
 The bus gains a **stateful snapshot**: alongside its subscriber registry it keeps,
 per `(rundownId, channel)`, a `Map<itemId, LiveTitle>` that every `publish`
 mutates the same way the client reducer does (`show` sets, `hide` deletes,
-`update` merges). It exposes `getSnapshot(rundownId, channel): LiveTitle[]`. This
-is the same module memory the subscribers already live in — no new storage, no DB.
+`update` merges, **`command` is ignored**). It exposes
+`getSnapshot(rundownId, channel): LiveTitle[]`. This is the same module memory the
+subscribers already live in — no new storage, no DB.
+
+`command` events are deliberately **not** snapshotted: they are imperative and
+fire-and-forget, so they relay live but never replay on reconnect (a running timer
+comes back stopped at its last `data`).
 
 ### Reload recovery — in-memory snapshot
 

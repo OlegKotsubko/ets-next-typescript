@@ -1,8 +1,28 @@
 # Multi-User MIDI Remote Implementation Plan
 
+> ## ⚠️ STALE — DO NOT EXECUTE AS WRITTEN (2026-06-21)
+>
+> This plan predates the multi-layer and title-contract designs and contradicts
+> them in several load-bearing ways. **Regenerate it** from the amended spec
+> (`docs/superpowers/specs/2026-06-18-multi-user-midi-remote-design.md`) after the
+> base app (P0–P5) is built — per the "one plan at a time" convention, a plan
+> should reflect the code that actually exists.
+>
+> What is now wrong here:
+> - **`midiAction` pgEnum + every `z.enum(['show','hide','update'])`** — `action`
+>   is now **validated text**, checked against `['air','hide','update', ...the
+>   title's declared command actions]`. Actions are dynamic per title, so no DDL enum.
+> - **`SEED_PROJECT_ID` / singleton-project seeding + `rundowns.owner_id`** — the
+>   base app is **multi-project** and lands `owner_id` in its own schema stage.
+> - **`buildTriggerEvent` publishing `{type: action}` directly** — triggers now
+>   dispatch to the same handlers the control page uses (single-item `/take`,
+>   `/hide-air`, `/update`, `/command`), always on the **air** channel.
+> - **"one on-air title, last action wins"** — Air is a **layered set**; actions
+>   compose.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let a subscriber user act as a remote MIDI trigger surface for an owner user's live rundown, firing show/hide/update on the owner's titles via the Web MIDI API through the existing SSE broadcast bus.
+**Goal:** Let a subscriber user act as a remote MIDI trigger surface for an owner user's live rundown, firing actions on the owner's titles via the Web MIDI API through the existing SSE broadcast bus.
 
 **Architecture:** Additive layer on the documented ETS model. Project becomes a migration-seeded singleton; ownership moves onto rundowns. Three new tables (`subscriptions`, `rundown_grants`, `midi_bindings`) plus `rundowns.owner_id`. Control is grant-gated; visibility is open via a read-only directory endpoint. Logic that can be (authorization, directory shaping, binding validation, trigger payload) is extracted into pure functions and unit-tested; route handlers stay thin.
 
