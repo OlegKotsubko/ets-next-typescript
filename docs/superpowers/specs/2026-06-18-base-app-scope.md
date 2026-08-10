@@ -14,33 +14,29 @@ This document only sequences it.
 |---|---|---|
 | P0 scaffold | ✅ done | Next **16** (not 15 — `proxy.ts` needs it), React 19, TS, Vitest, ESLint flat config, RTK store, MUI theme, SCSS |
 | P1 database | ✅ done | `db/schema.ts` + migrations `0000`, `0001`, `0002` |
-| P2 auth | 🟡 **partial** | Tasks 1–4 only — see below |
-| P3 titles | ⬜ | — |
+| P2 auth | ✅ done | `lib/auth.ts`, `/login`, `/admin`, `proxy.ts` guard, `scripts/create-user.ts` |
+| P3 titles | ⬜ **next** | — |
 | P4 bus + SSE | ⬜ | — |
 | P5a admin shell | ⬜ | — |
 | P5b controller | ⬜ | already planned (14 tasks) |
 | P6 data CRUD · P7 deploy | ⬜ | — |
 
-Branch `p2-auth` @ `8d16632`; 31 tests passing. **Everything from P3 down is unbuilt.**
+Branch `p2-auth`; 40 tests passing; `npm run build` clean. **Everything from P3
+down is unbuilt.**
 
-### P2 is unfinished — finish it before P3
+P2's plan had stalled after Task 4 (no `/login`, no `/admin`, no
+`scripts/create-user.ts`). Tasks 5–9 were executed on 2026-08-10 and the loop is
+now verified end to end against the dev Neon branch:
 
-`docs/superpowers/plans/2026-07-03-p2-auth.md` has 9 tasks; execution stopped
-after Task 4. Verified against the filesystem (the plan's checkboxes were never
-ticked, so they are not a reliable signal):
-
-| P2 task | State | Evidence |
-|---|---|---|
-| 1–3 auth schema, `lib/auth.ts`, `lib/auth-guard.ts` | ✅ | `buildAuthOptions()` + `auth` exported; `guardRequest()` exported |
-| 4 Next 16 upgrade + `proxy.ts` | ✅ | `next@^16.2.10`; `proxy.ts` at repo root |
-| **5 `/login` page** | ❌ | no `app/login/`; `react-hook-form` + `@hookform/resolvers` **not installed** |
-| **6 protected `/admin` placeholder** | ❌ | no `app/admin/` |
-| **7 `scripts/create-user.ts`** | ❌ | no `scripts/` directory; `tsx` **not installed** |
-| **8 guarded e2e auth round-trip** | ❌ | no such test |
-| **9 doc sync** | ❌ | `CLAUDE.md` still says `middleware.ts` |
-
-Consequence: **there is no way to log in and no way to create a user.** The guard
-and the auth API exist, but nothing exercises them. Resume that plan at Task 5.
+| Check | Result |
+|---|---|
+| `/admin` logged out | `307` → `/login` |
+| `GET /api/projects/x` logged out | `401 {"error":"Unauthorized"}` |
+| `POST /api/auth/sign-up/email` | `400` — `disableSignUp` holds |
+| `/login` | `200` (public) |
+| sign in → `/admin` | `200`, renders the operator email + Sign out |
+| sign out → `/admin` | `307` → `/login` |
+| `next build` | `ƒ Proxy (Middleware)` registered — confirms `proxy.ts` on Next 16 |
 
 > ## Revision note (2026-06-21, amended 2026-08-10)
 >
@@ -110,13 +106,21 @@ below can be built, tested, and committed before the next begins.
 
 **Plan:** `docs/superpowers/plans/2026-07-01-p1-database-schema.md` (executed).
 
-### P2 — Auth 🟡 partial (resume at Task 5)
-**Goal:** login, sessions, protected routes.
-- ✅ `lib/auth.ts` (better-auth + Drizzle adapter, `usePlural: true`,
-  `disableSignUp: true` via `buildAuthOptions()`), `lib/auth-client.ts`,
-  `app/api/auth/[...all]/route.ts`, `lib/auth-guard.ts`.
-- ❌ **Still owed:** `/login` (RHF + `zodResolver`), the protected `/admin`
-  placeholder, `scripts/create-user.ts`, the e2e round-trip, and the doc sync.
+### P2 — Auth ✅ done
+**Delivered:** login, sessions, protected routes.
+- `lib/auth.ts` (better-auth + Drizzle adapter, `usePlural: true`,
+  `disableSignUp: !allowSignUp` via the `buildAuthOptions()` factory),
+  `lib/auth-client.ts`, `app/api/auth/[...all]/route.ts`, `lib/auth-guard.ts`.
+- `/login` (RHF + `zodResolver` + MUI), protected `/admin` placeholder with
+  `SignOutButton`, `scripts/create-user.ts`, guarded e2e round-trip test.
+- Guard is **`proxy.ts`**, not `middleware.ts` — Next 15.5 renamed it and it only
+  registers on Next 16. Pure decision logic is factored into
+  `lib/auth-guard.ts` (`guardRequest`): API paths get `401`, pages get a
+  redirect. The cookie check is **optimistic**; `auth.api.getSession` is the
+  authoritative check in every protected page/handler.
+- **No public sign-up is a server property** (`disableSignUp`), not a missing UI.
+  Only `scripts/create-user.ts` — via its own `allowSignUp: true` instance — can
+  create users.
 - Route guard is **`proxy.ts`**, not `middleware.ts` — Next 15.5 renamed it, and
   it only registers on Next 16. It gates `/admin/*` and `/api/projects/*` via an
   optimistic session-cookie check. `CLAUDE.md`'s route map still says
@@ -228,18 +232,23 @@ MIDI Remote** plan (the existing one is stale — see its banner). Plans are wri
 **one at a time**: write P<n> → execute → write P<n+1>, so each plan reflects what
 the previous one actually produced.
 
-- **Build order:** ~~P0 → P1~~ (done) → **P2 Tasks 5–9** (resume) → P3 → P4 →
-  P5a → P5b → P6 → P7 → MIDI feature.
+- **Build order:** ~~P0 → P1 → P2~~ (done) → **P3** → P4 → P5a → P5b → P6 → P7 →
+  MIDI feature.
 - **Remaining migrations:** exactly two more are expected —
   `rundown_items.layer` (multi-layer plan, Task 1) and the 3 MIDI collaboration
   tables (MIDI plan). P3, P4, and P5a are migration-free.
 
-## Doc debts to clear while building
+## Doc debts — cleared 2026-08-10
 
-Tracked here so they don't get lost; none block P3.
+All resolved in P2 Task 9; kept here as a record.
 
-- `docs/tech-stack.md` pins Next 15 → code runs Next **16**.
-- `CLAUDE.md` route map says `middleware.ts` → code uses **`proxy.ts`**.
-- `docs/titles-system.md` and `docs/architecture.md` still reference **Tailwind**
-  for title styling, contradicting `docs/tech-stack.md` + `CLAUDE.md`
-  (SCSS modules + CSS variables). `docs/projects-system.md` is already fixed.
+- ✅ `docs/tech-stack.md` now pins Next `^16`, `better-auth ^1.6`, drizzle
+  `^0.45`/`^0.31`; `docs/getting-started.md` says Node 20.9+.
+- ✅ `CLAUDE.md` route map says **`proxy.ts`**; tech-stack line says Next.js 16.
+- ✅ `docs/titles-system.md` and `docs/architecture.md` converted from
+  **Tailwind** to SCSS modules + CSS variables (the `index.tsx` example now
+  ships a matching `.module.scss`). Remaining Tailwind mentions are the
+  deliberate rejections in `tech-stack.md` / `projects-system.md`.
+- ✅ `better-auth-next` (a package that does not exist on npm) purged from all
+  docs; `docs/auth.md` rewritten against the shipped implementation.
+- ✅ `docs/database.md` auth tables corrected to `verifications`.

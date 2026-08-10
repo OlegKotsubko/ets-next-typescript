@@ -6,13 +6,13 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 
 | Concern | Package | Version |
 |---|---|---|
-| Framework | `next` | `^15.0.0` |
+| Framework | `next` | `^16.0.0` |
 | UI runtime | `react`, `react-dom` | `^19.0.0` |
 | TypeScript | `typescript` | `^5.6.0` |
-| Auth | `better-auth`, `better-auth-next` | latest stable |
+| Auth | `better-auth` | `^1.6.0` |
 | Validation | `zod` | `^3.23.0` |
 | Forms | `react-hook-form`, `@hookform/resolvers` | `^7.53.0`, `^3.9.0` |
-| ORM | `drizzle-orm`, `drizzle-kit` | `^0.36.0`, `^0.27.0` |
+| ORM | `drizzle-orm`, `drizzle-kit` | `^0.45.0`, `^0.31.0` |
 | Database driver | `@neondatabase/serverless` | `^0.10.0` |
 | Admin UI | `@mui/material`, `@emotion/react`, `@emotion/styled` | `^6.0.0` |
 | Title styling | `sass` (SCSS) | `^1.80.0` |
@@ -24,7 +24,7 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 
 **Next.js (App Router).** One repo for frontend and backend. App Router gives per-route runtime selection (Node for most routes, **Edge** for SSE streams), Server Components for fast admin pages, and Route Handlers for the JSON API.
 
-**better-auth-next.** Email + password sign-in with sessions in the database. Pluggable to OAuth later without rewriting the login UI. Server-side session helpers integrate cleanly with both API routes and middleware.
+**better-auth.** Email + password sign-in with sessions in the database. Pluggable to OAuth later without rewriting the login UI. Server-side session helpers integrate cleanly with both API routes and middleware.
 
 **Zod.** The contract layer. Each title's `model.ts` Zod schema is reused for: (1) the admin form, (2) API mutation validation, (3) SSE payload validation. One schema, three call sites. See [titles-system.md](./titles-system.md).
 
@@ -48,14 +48,14 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 - **Tailwind** — SCSS compiles to plain CSS with zero runtime and keeps title styling decoupled from a utility config; we don't need atomic utilities for a small set of title components.
 - **shadcn/ui** — MUI already gives us themed components.
 - **Prisma** — Drizzle is a better fit for the serverless driver and Edge readiness.
-- **next-auth / Auth.js** — better-auth-next is simpler for the email-only MVP.
+- **next-auth / Auth.js** — better-auth is simpler for the email-only MVP.
 - **GraphQL** — REST under `/api/projects/[projectId]/...` is plenty for CRUD.
 
 ## Install once
 
 ```bash
-npm install next@^15 react@^19 react-dom@^19 typescript@^5.6
-npm install better-auth better-auth-next zod
+npm install next@^16 react@^19 react-dom@^19 typescript@^5.6
+npm install better-auth zod
 npm install react-hook-form @hookform/resolvers
 npm install drizzle-orm @neondatabase/serverless
 npm install --save-dev drizzle-kit

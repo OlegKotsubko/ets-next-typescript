@@ -44,5 +44,7 @@ describe.skipIf(!hasEnv)('auth round-trip', () => {
       // Cascades to sessions + accounts.
       await db.delete(users).where(eq(users.email, email))
     }
-  })
+    // 30s, not vitest's 5s default: this makes four network round-trips to Neon
+    // plus two password hashes, and runs slower under full-suite contention.
+  }, 30_000)
 })

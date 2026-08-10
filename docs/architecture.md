@@ -30,7 +30,7 @@ ETS produces broadcast graphics (lower-thirds, scoreboards, player cards, sponso
                               ┌────────▼─────────┐         ┌────────▼─────────┐
                               │ /preview/[id]    │         │ /air/[id]        │
                               │ (browser source) │         │ (browser source) │
-                              │ Tailwind titles  │         │ Tailwind titles  │
+                              │ SCSS titles      │         │ SCSS titles      │
                               └──────────────────┘         └──────────────────┘
                                        │                            │
                                        └────── shown in OBS ────────┘
@@ -72,8 +72,8 @@ These decisions are reused across multiple docs; each is detailed in the file no
 1. **File-system for overlay packages, database for projects and entities** ([projects-system.md](./projects-system.md), [database.md](./database.md)). A `projects/<label>/` folder is a reusable *overlay package* (overlay components, CSS, fonts, title videos/backgrounds). A *project* is a UI-created broadcast event (`projects` row, UUID) that selects a package via `project_label`. All mutable per-event data (players, talents, teams, sponsors, brackets, overlays) lives in Postgres keyed by `project_id`.
 2. **Single source of truth per title via `model.ts`** ([titles-system.md](./titles-system.md)). One Zod schema generates the admin form fields, validates RTK Query mutations, and validates SSE payloads on both server and client.
 3. **SSE, not WebSockets** ([preview-air.md](./preview-air.md)). One-way server → client is sufficient for `show`/`hide`/`update`. SSE is simpler, works through CDNs, and aligns with Edge runtime.
-4. **Edge runtime only for streaming routes** ([deployment.md](./deployment.md)). The rest of the app runs on Node so `@neondatabase/serverless` and `better-auth-next` work normally.
-5. **Split UI: MUI for admin, Tailwind for titles** ([tech-stack.md](./tech-stack.md), [titles-system.md](./titles-system.md)). Admin pages use MUI. Title components under `projects/<slug>/titles/*` use Tailwind utility classes only.
+4. **Edge runtime only for streaming routes** ([deployment.md](./deployment.md)). The rest of the app runs on Node so `@neondatabase/serverless` and `better-auth` work normally.
+5. **Split UI: MUI for admin, SCSS for titles** ([tech-stack.md](./tech-stack.md), [titles-system.md](./titles-system.md)). Admin pages use MUI. Title components under `projects/<slug>/titles/*` use SCSS modules + `project.css` CSS variables only.
 6. **`project_id` FK isolation, enforced by URL routing** ([database.md](./database.md)). Every entity row has a `project_id uuid` column referencing `projects.id`. All entity routes live under `/api/projects/[projectId]/...` so the filter is structurally enforced and the project ID is never trusted from the request body.
 
 ## Out of MVP scope
