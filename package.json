@@ -17,14 +17,18 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@hookform/resolvers": "^5.7.1",
     "@mui/material": "^6.5.0",
+    "@mui/x-data-grid": "^7.29.13",
     "@neondatabase/serverless": "^0.10.4",
+    "@netlify/blobs": "^10.7.12",
     "@reduxjs/toolkit": "^2.12.0",
     "better-auth": "^1.6.23",
     "drizzle-orm": "^0.45.2",
     "next": "^16.2.10",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-hook-form": "^7.85.0",
     "react-redux": "^9.3.0",
     "zod": "^3.25.76"
   },
@@ -41,6 +45,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.10",
     "jsdom": "^29.1.1",
+    "netlify-cli": "^27.1.1",
     "sass": "^1.101.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9"
