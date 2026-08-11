@@ -33,7 +33,7 @@ export async function listOverlayPackages(root: string = PROJECTS_DIR): Promise<
   const labels = listOverlayPackageLabels(root)
   const configs = await Promise.all(
     labels.map(async (label) => {
-      const mod = await import(join(root, label, CONFIG_FILE))
+      const mod = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ join(root, label, CONFIG_FILE))
       return overlayPackageConfigSchema.parse(mod.default)
     }),
   )
