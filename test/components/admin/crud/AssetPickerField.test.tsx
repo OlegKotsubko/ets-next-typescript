@@ -10,12 +10,17 @@ function renderWithStore(ui: React.ReactElement) {
     reducer: { [assetsApi.reducerPath]: assetsApi.reducer },
     middleware: (gd) => gd().concat(assetsApi.middleware),
   })
-  return render(<Provider store={store}>{ui}</Provider>)
+  return render(<Provider store={store}>
+    {ui}
+  </Provider>)
 }
 
 describe('AssetPickerField', () => {
   it('renders a select control and an upload button', () => {
-    renderWithStore(<AssetPickerField projectId="proj-1" value={null} onChange={vi.fn()} kind="logo" />)
+    renderWithStore(<AssetPickerField projectId="proj-1"
+      value={null}
+      onChange={vi.fn()}
+      kind="logo" />)
     expect(screen.getByRole('button', { name: /upload/i })).toBeInTheDocument()
   })
 })

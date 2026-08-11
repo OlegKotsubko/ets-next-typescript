@@ -9,8 +9,7 @@ const { api } = createEntityApi<Video, CreateVideoInput, UpdateVideoInput>({
 })
 
 export const videosApi = api
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const hooks = api as any
 export const useListVideosQuery = hooks.useListVideosQuery
 export const useGetVideoQuery = hooks.useGetVideoQuery

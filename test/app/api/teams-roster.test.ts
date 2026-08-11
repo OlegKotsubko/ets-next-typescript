@@ -5,7 +5,7 @@ const getSessionMock = vi.fn()
 vi.mock('@/lib/auth', () => ({ auth: { api: { getSession: (...args: unknown[]) => getSessionMock(...args) } } }))
 
 const txMock = vi.fn()
-const dbMock = { transaction: (fn: (tx: unknown) => unknown) => txMock(fn) }
+const dbMock = { transaction: (fn: (_tx: unknown) => unknown) => txMock(fn) }
 vi.mock('@/db', () => ({ db: dbMock }))
 
 const { PUT } = await import('@/app/api/projects/[projectId]/teams/[id]/roster/route')

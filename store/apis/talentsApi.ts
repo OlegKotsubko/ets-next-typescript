@@ -9,8 +9,7 @@ const { api } = createEntityApi<Talent, CreateTalentInput, UpdateTalentInput>({
 })
 
 export const talentsApi = api
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const hooks = api as any
 export const useListTalentsQuery = hooks.useListTalentsQuery
 export const useGetTalentQuery = hooks.useGetTalentQuery

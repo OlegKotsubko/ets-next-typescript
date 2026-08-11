@@ -11,12 +11,16 @@ function renderWithStore(ui: React.ReactElement) {
     reducer: { [assetsApi.reducerPath]: assetsApi.reducer },
     middleware: (gd) => gd().concat(assetsApi.middleware),
   })
-  return render(<Provider store={store}>{ui}</Provider>)
+  return render(<Provider store={store}>
+    {ui}
+  </Provider>)
 }
 
 describe('CrudPage', () => {
   it('renders an Add button for the entity', () => {
-    renderWithStore(<CrudPage projectId="proj-1" entityDef={assetsEntityDef} api={assetsApi} />)
+    renderWithStore(<CrudPage projectId="proj-1"
+      entityDef={assetsEntityDef}
+      api={assetsApi} />)
     expect(screen.getByRole('button', { name: /add asset/i })).toBeInTheDocument()
   })
 })

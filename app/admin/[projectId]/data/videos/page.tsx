@@ -6,5 +6,7 @@ import { videosEntityDef } from '@/lib/entities/videos'
 
 export default function VideosPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params)
-  return <CrudPage projectId={projectId} entityDef={videosEntityDef} api={videosApi} />
+  return <CrudPage projectId={projectId}
+    entityDef={videosEntityDef}
+    api={videosApi} />
 }

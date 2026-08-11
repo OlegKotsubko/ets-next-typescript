@@ -9,8 +9,7 @@ const { api } = createEntityApi<Asset, CreateAssetInput, UpdateAssetInput>({
 })
 
 export const assetsApi = api
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const hooks = api as any
 export const useListAssetsQuery = hooks.useListAssetsQuery
 export const useGetAssetQuery = hooks.useGetAssetQuery

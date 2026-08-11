@@ -31,12 +31,12 @@ const entityMiddleware = [
   videosApi.middleware,
   bracketsApi.middleware,
   projectCssApi.middleware,
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 ] as any[]
 
 export const store = configureStore({
   reducer: rootReducer,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   middleware: (getDefault) => getDefault().concat(...entityMiddleware) as any,
 })
 

@@ -9,8 +9,7 @@ const { api } = createEntityApi<Player, CreatePlayerInput, UpdatePlayerInput>({
 })
 
 export const playersApi = api
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const hooks = api as any
 export const useListPlayersQuery = hooks.useListPlayersQuery
 export const useGetPlayerQuery = hooks.useGetPlayerQuery

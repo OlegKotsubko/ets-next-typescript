@@ -9,8 +9,7 @@ const { api } = createEntityApi<Sponsor, CreateSponsorInput, UpdateSponsorInput>
 })
 
 export const sponsorsApi = api
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const hooks = api as any
 export const useListSponsorsQuery = hooks.useListSponsorsQuery
 export const useGetSponsorQuery = hooks.useGetSponsorQuery

@@ -30,10 +30,16 @@ export function TeamRosterEditor({ projectId, teamId }: { projectId: string; tea
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>Roster</Typography>
+      <Typography variant="subtitle1"
+        sx={{ mb: 1 }}>
+Roster
+      </Typography>
       <Stack spacing={1}>
         {slots.map((slot, i) => (
-          <Stack direction="row" spacing={1} alignItems="center" key={i}>
+          <Stack direction="row"
+            spacing={1}
+            alignItems="center"
+            key={i}>
             <TextField
               select
               size="small"
@@ -42,21 +48,32 @@ export function TeamRosterEditor({ projectId, teamId }: { projectId: string; tea
               onChange={(e) => updateSlot(i, { playerId: e.target.value })}
               sx={{ minWidth: 180 }}
             >
-              <MenuItem value="">Empty</MenuItem>
-              {players.map((p: { id: string; name: string }) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+              <MenuItem value="">
+Empty
+              </MenuItem>
+              {players.map((p: { id: string; name: string }) => <MenuItem key={p.id}
+                value={p.id}>
+                {p.name}
+              </MenuItem>)}
             </TextField>
             <FormControlLabel
-              control={<Checkbox checked={slot?.isCaptain ?? false} onChange={(e) => updateSlot(i, { isCaptain: e.target.checked })} />}
+              control={<Checkbox checked={slot?.isCaptain ?? false}
+                onChange={(e) => updateSlot(i, { isCaptain: e.target.checked })} />}
               label="Captain"
             />
             <FormControlLabel
-              control={<Checkbox checked={slot?.isStandIn ?? false} onChange={(e) => updateSlot(i, { isStandIn: e.target.checked })} />}
+              control={<Checkbox checked={slot?.isStandIn ?? false}
+                onChange={(e) => updateSlot(i, { isStandIn: e.target.checked })} />}
               label="Stand-in"
             />
           </Stack>
         ))}
       </Stack>
-      <Button variant="outlined" onClick={save} sx={{ mt: 2 }}>Save Roster</Button>
+      <Button variant="outlined"
+        onClick={save}
+        sx={{ mt: 2 }}>
+Save Roster
+      </Button>
     </Box>
   )
 }

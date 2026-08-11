@@ -20,7 +20,7 @@ async function requireSession(req: Request): Promise<Response | null> {
 // The generic table shape varies per entity, and Drizzle's query builder overloads don't
 // unify cleanly across arbitrary tables — this factory relies on tests (not the type
 // checker) to prove runtime correctness, so internals use `any` deliberately.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 export function createCrudHandlers<TTable extends AnyTable>(config: {
   table: TTable
   createSchema: z.ZodTypeAny
@@ -79,4 +79,4 @@ export function createCrudHandlers<TTable extends AnyTable>(config: {
     },
   }
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 

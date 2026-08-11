@@ -22,8 +22,7 @@ export const teamsApi = baseApi.injectEndpoints({
 })
 
 export const { useReplaceRosterMutation } = teamsApi
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const hooks = teamsApi as any
 export const useListTeamsQuery = hooks.useListTeamsQuery
 export const useGetTeamQuery = hooks.useGetTeamQuery

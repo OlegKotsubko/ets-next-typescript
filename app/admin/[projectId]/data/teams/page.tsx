@@ -13,15 +13,24 @@ export default function TeamsPage({ params }: { params: Promise<{ projectId: str
 
   return (
     <Box>
-      <CrudPage projectId={projectId} entityDef={teamsEntityDef} api={teamsApi} />
+      <CrudPage projectId={projectId}
+        entityDef={teamsEntityDef}
+        api={teamsApi} />
       <Divider sx={{ my: 3 }} />
       {teams.length > 0 && (
         <Box>
-          <select onChange={(e) => setSelectedTeamId(e.target.value || null)} defaultValue="">
-            <option value="">Select a team to edit its roster…</option>
-            {teams.map((t: { id: string; name: string }) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          <select onChange={(e) => setSelectedTeamId(e.target.value || null)}
+            defaultValue="">
+            <option value="">
+Select a team to edit its roster…
+            </option>
+            {teams.map((t: { id: string; name: string }) => <option key={t.id}
+              value={t.id}>
+              {t.name}
+            </option>)}
           </select>
-          {selectedTeamId && <TeamRosterEditor projectId={projectId} teamId={selectedTeamId} />}
+          {selectedTeamId && <TeamRosterEditor projectId={projectId}
+            teamId={selectedTeamId} />}
         </Box>
       )}
     </Box>

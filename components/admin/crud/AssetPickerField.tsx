@@ -8,7 +8,7 @@ export function AssetPickerField({
 }: {
   projectId: string
   value: string | null
-  onChange: (assetId: string | null) => void
+  onChange: (_assetId: string | null) => void
   kind: string
 }) {
   const { data: assets = [] } = useListAssetsQuery(projectId)
@@ -28,7 +28,9 @@ export function AssetPickerField({
   }
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <Stack direction="row"
+      spacing={1}
+      alignItems="center">
       <TextField
         select
         size="small"
@@ -37,14 +39,23 @@ export function AssetPickerField({
         onChange={(e) => onChange(e.target.value || null)}
         sx={{ minWidth: 200 }}
       >
-        <MenuItem value="">None</MenuItem>
+        <MenuItem value="">
+None
+        </MenuItem>
         {assets.map((a: { id: string; filename: string }) => (
-          <MenuItem key={a.id} value={a.id}>{a.filename}</MenuItem>
+          <MenuItem key={a.id}
+            value={a.id}>
+            {a.filename}
+          </MenuItem>
         ))}
       </TextField>
-      <Button component="label" disabled={uploading}>
+      <Button component="label"
+        disabled={uploading}>
         {uploading ? 'Uploading…' : 'Upload'}
-        <input type="file" hidden onChange={handleUpload} accept="image/*,video/*" />
+        <input type="file"
+          hidden
+          onChange={handleUpload}
+          accept="image/*,video/*" />
       </Button>
     </Stack>
   )

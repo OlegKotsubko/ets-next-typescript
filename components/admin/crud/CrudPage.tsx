@@ -7,8 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { EntityDef } from '@/lib/entities/types'
 import { AssetPickerField } from './AssetPickerField'
 import { ExtraMapField } from './ExtraMapField'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type EntityApi = Record<string, any>
 
 export function CrudPage<TRow extends { id: string }>({
@@ -26,10 +25,12 @@ export function CrudPage<TRow extends { id: string }>({
   const updateHookName = `useUpdate${entityDef.entityName}Mutation`
   const deleteHookName = `useDelete${entityDef.entityName}Mutation`
 
+  type Mutate<TArgs> = () => [(args: TArgs) => Promise<unknown>, unknown]
+
   const useListQuery = api[listHookName] as (projectId: string) => { data?: TRow[] }
-  const useCreateMutation = api[createHookName] as () => [(args: { projectId: string; data: unknown }) => Promise<unknown>, unknown]
-  const useUpdateMutation = api[updateHookName] as () => [(args: { projectId: string; id: string; data: unknown }) => Promise<unknown>, unknown]
-  const useDeleteMutation = api[deleteHookName] as () => [(args: { projectId: string; id: string }) => Promise<unknown>, unknown]
+  const useCreateMutation = api[createHookName] as Mutate<{ projectId: string; data: unknown }>
+  const useUpdateMutation = api[updateHookName] as Mutate<{ projectId: string; id: string; data: unknown }>
+  const useDeleteMutation = api[deleteHookName] as Mutate<{ projectId: string; id: string }>
 
   const { data: rows = [] } = useListQuery(projectId)
   const [createRow] = useCreateMutation()
@@ -64,8 +65,15 @@ export function CrudPage<TRow extends { id: string }>({
       sortable: false,
       renderCell: (params) => (
         <>
-          <Button size="small" onClick={() => openEdit(params.row as TRow)}>Edit</Button>
-          <Button size="small" color="error" onClick={() => deleteRow({ projectId, id: (params.row as TRow).id })}>Delete</Button>
+          <Button size="small"
+            onClick={() => openEdit(params.row as TRow)}>
+Edit
+          </Button>
+          <Button size="small"
+            color="error"
+            onClick={() => deleteRow({ projectId, id: (params.row as TRow).id })}>
+Delete
+          </Button>
         </>
       ),
     },
@@ -74,12 +82,26 @@ export function CrudPage<TRow extends { id: string }>({
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5">{entityDef.entityName}s</Typography>
-        <Button variant="contained" onClick={openCreate}>{`Add ${entityDef.entityName}`}</Button>
+        <Typography variant="h5">
+          {entityDef.entityName}
+s
+        </Typography>
+        <Button variant="contained"
+          onClick={openCreate}>
+          {`Add ${entityDef.entityName}`}
+        </Button>
       </Box>
-      <DataGrid rows={rows} columns={columns} getRowId={(r) => (r as TRow).id} autoHeight />
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editing ? `Edit ${entityDef.entityName}` : `Add ${entityDef.entityName}`}</DialogTitle>
+      <DataGrid rows={rows}
+        columns={columns}
+        getRowId={(r) => (r as TRow).id}
+        autoHeight />
+      <Dialog open={open}
+        onClose={() => setOpen(false)}
+        fullWidth
+        maxWidth="sm">
+        <DialogTitle>
+          {editing ? `Edit ${entityDef.entityName}` : `Add ${entityDef.entityName}`}
+        </DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {entityDef.fields.map((field) => (
@@ -98,15 +120,22 @@ export function CrudPage<TRow extends { id: string }>({
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                       >
-                        {field.options?.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                        {field.options?.map((o) => <MenuItem key={o.value}
+                          value={o.value}>
+                          {o.label}
+                        </MenuItem>)}
                       </TextField>
                     )
                   }
                   if (field.widget === 'asset-picker') {
-                    return <AssetPickerField projectId={projectId} value={rhf.value ?? null} onChange={rhf.onChange} kind="other" />
+                    return <AssetPickerField projectId={projectId}
+                      value={rhf.value ?? null}
+                      onChange={rhf.onChange}
+                      kind="other" />
                   }
                   if (field.widget === 'extra-map') {
-                    return <ExtraMapField value={rhf.value ?? {}} onChange={rhf.onChange} />
+                    return <ExtraMapField value={rhf.value ?? {}}
+                      onChange={rhf.onChange} />
                   }
                   return (
                     <TextField
@@ -123,8 +152,13 @@ export function CrudPage<TRow extends { id: string }>({
             ))}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">Save</Button>
+            <Button onClick={() => setOpen(false)}>
+Cancel
+            </Button>
+            <Button type="submit"
+              variant="contained">
+Save
+            </Button>
           </DialogActions>
         </form>
       </Dialog>

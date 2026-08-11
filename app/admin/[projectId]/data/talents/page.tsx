@@ -6,5 +6,7 @@ import { talentsEntityDef } from '@/lib/entities/talents'
 
 export default function TalentsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params)
-  return <CrudPage projectId={projectId} entityDef={talentsEntityDef} api={talentsApi} />
+  return <CrudPage projectId={projectId}
+    entityDef={talentsEntityDef}
+    api={talentsApi} />
 }

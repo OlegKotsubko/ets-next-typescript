@@ -10,7 +10,9 @@ export default function BracketDetailPage({ params }: { params: Promise<{ projec
   const [updateMatch] = useUpdateMatchMutation()
   const bracket = brackets.find((b) => b.id === bracketId)
 
-  if (!bracket) return <Typography>Loading…</Typography>
+  if (!bracket) return <Typography>
+Loading…
+  </Typography>
 
   function patchMatch(matchId: string, data: Partial<BracketMatch>) {
     updateMatch({ projectId, bracketId, matchId, data })
@@ -18,15 +20,25 @@ export default function BracketDetailPage({ params }: { params: Promise<{ projec
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ mb: 2 }}>{bracket.name}</Typography>
-      <Stack direction="row" spacing={3}>
+      <Typography variant="h5"
+        sx={{ mb: 2 }}>
+        {bracket.name}
+      </Typography>
+      <Stack direction="row"
+        spacing={3}>
         {bracket.rounds.map((round) => (
           <Box key={round.name}>
-            <Typography variant="subtitle1">{round.name}</Typography>
-            <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="subtitle1">
+              {round.name}
+            </Typography>
+            <Stack spacing={2}
+              sx={{ mt: 1 }}>
               {round.matches.map((match) => (
-                <Paper key={match.id} sx={{ p: 2 }}>
-                  <Typography variant="body2">{match.name}</Typography>
+                <Paper key={match.id}
+                  sx={{ p: 2 }}>
+                  <Typography variant="body2">
+                    {match.name}
+                  </Typography>
                   <TextField
                     select
                     size="small"
@@ -35,11 +47,19 @@ export default function BracketDetailPage({ params }: { params: Promise<{ projec
                     onChange={(e) => patchMatch(match.id, { status: e.target.value as BracketMatch['status'] })}
                     sx={{ mt: 1, minWidth: 140 }}
                   >
-                    <MenuItem value="scheduled">Scheduled</MenuItem>
-                    <MenuItem value="active">Active</MenuItem>
-                    <MenuItem value="finished">Finished</MenuItem>
+                    <MenuItem value="scheduled">
+Scheduled
+                    </MenuItem>
+                    <MenuItem value="active">
+Active
+                    </MenuItem>
+                    <MenuItem value="finished">
+Finished
+                    </MenuItem>
                   </TextField>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Stack direction="row"
+                    spacing={1}
+                    sx={{ mt: 1 }}>
                     <TextField
                       size="small"
                       type="number"
