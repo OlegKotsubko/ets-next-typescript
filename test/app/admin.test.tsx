@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { projectsApi } from '@/store/apis/projectsApi'
+import { overlayPackagesApi } from '@/store/apis/overlayPackagesApi'
 
 const getSession = vi.fn()
 vi.mock('@/lib/auth', () => ({
@@ -27,6 +31,19 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+function renderWithStore(ui: React.ReactElement) {
+  const store = configureStore({
+    reducer: {
+      [projectsApi.reducerPath]: projectsApi.reducer,
+      [overlayPackagesApi.reducerPath]: overlayPackagesApi.reducer,
+    },
+    middleware: (gd) => gd().concat(projectsApi.middleware, overlayPackagesApi.middleware),
+  })
+  return render(<Provider store={store}>
+    {ui}
+  </Provider>)
+}
+
 describe('AdminPage', () => {
   it('redirects to /login when there is no session', async () => {
     getSession.mockResolvedValue(null)
@@ -34,7 +51,7 @@ describe('AdminPage', () => {
   })
   it('renders the signed-in operator email', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1', email: 'op@ets.tv', name: 'op@ets.tv' } })
-    render(await AdminPage())
+    renderWithStore(await AdminPage())
     expect(screen.getByText(/op@ets\.tv/)).toBeInTheDocument()
   })
 })
