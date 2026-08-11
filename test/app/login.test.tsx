@@ -4,9 +4,19 @@ import userEvent from '@testing-library/user-event'
 
 const push = vi.fn()
 const refresh = vi.fn()
+const redirect = vi.fn((url: string) => {
+  throw new Error(`NEXT_REDIRECT:${url}`)
+})
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, refresh }),
+  redirect: (url: string) => redirect(url),
 }))
+
+const getSession = vi.fn()
+vi.mock('@/lib/auth', () => ({
+  auth: { api: { getSession: (...args: unknown[]) => getSession(...args) } },
+}))
+vi.mock('next/headers', () => ({ headers: async () => new Headers() }))
 
 const signInEmail = vi.fn()
 vi.mock('@/lib/auth-client', () => ({
@@ -14,6 +24,7 @@ vi.mock('@/lib/auth-client', () => ({
 }))
 
 import LoginPage from '@/app/login/page'
+import LoginForm from '@/app/login/LoginForm'
 import { loginSchema } from '@/app/login/schema'
 
 beforeEach(() => {
@@ -31,9 +42,21 @@ describe('loginSchema', () => {
 })
 
 describe('LoginPage', () => {
+  it('redirects to /admin when already signed in', async () => {
+    getSession.mockResolvedValue({ user: { id: 'u1', email: 'op@ets.tv' } })
+    await expect(LoginPage()).rejects.toThrow('NEXT_REDIRECT:/admin')
+  })
+  it('renders the login form when there is no session', async () => {
+    getSession.mockResolvedValue(null)
+    render(await LoginPage())
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+  })
+})
+
+describe('LoginForm', () => {
   it('shows validation errors without calling signIn', async () => {
     const user = userEvent.setup()
-    render(<LoginPage />)
+    render(<LoginForm />)
     await user.type(screen.getByLabelText(/email/i), 'not-an-email')
     await user.type(screen.getByLabelText(/password/i), 'short')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
@@ -45,7 +68,7 @@ describe('LoginPage', () => {
   it('signs in and navigates to /admin on success', async () => {
     signInEmail.mockResolvedValue({ data: {}, error: null })
     const user = userEvent.setup()
-    render(<LoginPage />)
+    render(<LoginForm />)
     await user.type(screen.getByLabelText(/email/i), 'op@ets.tv')
     await user.type(screen.getByLabelText(/password/i), 'longenough')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
@@ -56,7 +79,7 @@ describe('LoginPage', () => {
   it('surfaces a server error from better-auth', async () => {
     signInEmail.mockResolvedValue({ data: null, error: { message: 'Invalid email or password' } })
     const user = userEvent.setup()
-    render(<LoginPage />)
+    render(<LoginForm />)
     await user.type(screen.getByLabelText(/email/i), 'op@ets.tv')
     await user.type(screen.getByLabelText(/password/i), 'wrongpassword')
     await user.click(screen.getByRole('button', { name: /sign in/i }))

@@ -2,7 +2,8 @@
 // per-folder DB row. A folder is a package iff it holds project.config.ts.
 import { existsSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { overlayPackageConfigSchema, type OverlayPackageConfig } from './types'
+import type { OverlayPackageConfig } from './types'
+import { generatedPackages } from './generated'
 
 export const PROJECTS_DIR = join(process.cwd(), 'projects')
 
@@ -29,13 +30,7 @@ export function listOverlayPackageLabels(root: string = PROJECTS_DIR) {
     .sort()
 }
 
-export async function listOverlayPackages(root: string = PROJECTS_DIR): Promise<OverlayPackageConfig[]> {
-  const labels = listOverlayPackageLabels(root)
-  const configs = await Promise.all(
-    labels.map(async (label) => {
-      const mod = await import(join(root, label, CONFIG_FILE))
-      return overlayPackageConfigSchema.parse(mod.default)
-    }),
-  )
-  return configs
+// Static registry, not a runtime scan: see lib/projects/registry-codegen.ts for why.
+export async function listOverlayPackages(): Promise<OverlayPackageConfig[]> {
+  return generatedPackages
 }
