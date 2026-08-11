@@ -17,6 +17,9 @@ function getErrorMessage(err: unknown): string {
       if (data && typeof data === 'object' && 'message' in data && typeof (data as { message?: unknown }).message === 'string') {
         return (data as { message: string }).message
       }
+      if (data && typeof data === 'object' && 'error' in data && typeof (data as { error?: unknown }).error === 'string') {
+        return (data as { error: string }).error
+      }
       if (typeof data === 'string') return data
     }
     if ('error' in err && typeof (err as { error?: unknown }).error === 'string') {
@@ -30,8 +33,8 @@ function getErrorMessage(err: unknown): string {
 }
 
 export default function AdminGallery({ userEmail }: { userEmail: string }) {
-  const { data: projects = [] } = useListProjectsQuery()
-  const { data: packages = [] } = useListOverlayPackagesQuery()
+  const { data: projects = [], isError: projectsError } = useListProjectsQuery()
+  const { data: packages = [], isError: packagesError } = useListOverlayPackagesQuery()
   const [createProject, { isLoading }] = useCreateProjectMutation()
 
   const [open, setOpen] = useState(false)
@@ -89,7 +92,21 @@ Projects
         Add Project
       </Button>
 
-      {projects.length === 0 && (
+      {projectsError && (
+        <Alert severity="error"
+          sx={{ mb: 2 }}>
+          Failed to load projects — please refresh.
+        </Alert>
+      )}
+
+      {packagesError && (
+        <Alert severity="error"
+          sx={{ mb: 2 }}>
+          Failed to load overlay packages — please refresh.
+        </Alert>
+      )}
+
+      {!projectsError && projects.length === 0 && (
         <Typography color="text.secondary">
 No projects yet — click Add Project to create one.
         </Typography>
