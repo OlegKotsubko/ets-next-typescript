@@ -9,6 +9,8 @@ import { sponsorsApi } from '@/store/apis/sponsorsApi'
 import { videosApi } from '@/store/apis/videosApi'
 import { bracketsApi } from '@/store/apis/bracketsApi'
 import { projectCssApi } from '@/store/apis/projectCssApi'
+import { projectsApi } from '@/store/apis/projectsApi'
+import { overlayPackagesApi } from '@/store/apis/overlayPackagesApi'
 
 describe('store', () => {
   it('starts with no selected item', () => {
@@ -29,5 +31,11 @@ describe('store', () => {
     expect(state[videosApi.reducerPath]).toBeDefined()
     expect(state[bracketsApi.reducerPath]).toBeDefined()
     expect(state[projectCssApi.reducerPath]).toBeDefined()
+  })
+
+  it('registers projectsApi and overlayPackagesApi reducers', () => {
+    const state = store.getState()
+    expect(state[projectsApi.reducerPath]).toBeDefined()
+    expect(state[overlayPackagesApi.reducerPath]).toBeDefined()
   })
 })
