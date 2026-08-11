@@ -26,6 +26,7 @@ yarn-error.log*
 # Misc
 *.tsbuildinfo
 .netlify/
+deno.lock
 coverage
 next-env.d.ts
 
