@@ -25,7 +25,7 @@ Full field-level spec for every entity: [docs/data-entities.md](../../data-entit
 - Add the shared `extraSchema`/`Extra` type in `db/schemas/shared.ts` (used by Players, Talents, bracket matches).
 - One Zod schema file per entity under `db/schemas/<entity>.ts`: `create<Entity>Schema` and `update<Entity>Schema` (update = `.partial()` of create).
 - `npm run db:generate` → commit the emitted SQL migration → `npm run db:migrate` against dev `DATABASE_URL`.
-- `scripts/seed-dev-project.ts`: inserts one `projects` row (`label: 'default'`, `mode: 'team_vs_team'`, a placeholder name/date), prints the UUID to stdout. Run manually once after migrating; not part of any npm lifecycle script.
+- **No seed script needed.** A singleton project already exists: `SEED_PROJECT_ID` (`db/constants.ts`) is seeded idempotently by migration `0001_seed_singleton_project.sql` (`label: 'default'`). All entity pages in this pass are tested against that fixed UUID.
 
 ### 2. Asset upload (Netlify Blobs)
 
@@ -95,7 +95,7 @@ Full field-level spec for every entity: [docs/data-entities.md](../../data-entit
 /admin/[projectId]/data/css                           — custom single-row editor
 ```
 
-`/admin` itself is untouched. Testing uses the seeded project's UUID typed directly into the URL.
+`/admin` itself is untouched. Testing uses `SEED_PROJECT_ID` typed directly into the URL.
 
 ### 7. Testing
 
