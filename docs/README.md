@@ -12,7 +12,7 @@ This folder is the single source of truth for ETS architecture, conventions, and
 
 ## Reference
 
-- [auth.md](./auth.md) — better-auth-next setup, login flow, protected routes.
+- [auth.md](./auth.md) — better-auth setup, login flow, protected routes.
 - [database.md](./database.md) — Drizzle schema, the `projects` (UUID) table, `project_id` isolation pattern, migrations vs project creation.
 - [data-entities.md](./data-entities.md) — CRUD entity reference (Players, Talents, Teams, Sponsors, Assets, Videos, Brackets, Project CSS) and the `extra` string-map.
 - [rundowns.md](./rundowns.md) — the **Overlays** section: rundown data model, the editor UI, the broadcast controller.

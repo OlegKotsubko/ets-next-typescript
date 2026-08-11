@@ -193,9 +193,10 @@ git commit -m "feat(api): validate and persist rundown item layer"
 
 ```ts
 export type BroadcastEvent =
-  | { type: 'show';   itemId: string; titleKey: string; layer: number; position: number; data: unknown }
-  | { type: 'hide';   itemId: string }
-  | { type: 'update'; itemId: string; layer: number; position: number; data: unknown };
+  | { type: 'show';    itemId: string; titleKey: string; layer: number; position: number; data: unknown }
+  | { type: 'hide';    itemId: string }
+  | { type: 'update';  itemId: string; layer: number; position: number; data: unknown }
+  | { type: 'command'; itemId: string; action: string; payload?: unknown };
 ```
 
 - [ ] **Step 1: Write the failing test**
@@ -214,7 +215,11 @@ describe('BroadcastEvent', () => {
   });
   it('hide carries only itemId', () => {
     const e: BroadcastEvent = { type: 'hide', itemId: 'i1' };
-    expectTypeOf(e.type).toEqualTypeOf<'show' | 'hide' | 'update'>();
+    expectTypeOf(e.type).toEqualTypeOf<'show' | 'hide' | 'update' | 'command'>();
+  });
+  it('command carries an action name', () => {
+    const e: BroadcastEvent = { type: 'command', itemId: 'i1', action: 'start' };
+    expectTypeOf(e).toMatchTypeOf<{ action: string }>();
   });
 });
 ```
@@ -295,6 +300,12 @@ describe('applyEvent', () => {
     const m1 = applyEvent(new Map(), { type: 'update', itemId: 'ghost', layer: 5, position: 0, data: {} });
     expect(m1.size).toBe(0);
   });
+
+  it('command does not alter the set (fire-and-forget, never snapshotted)', () => {
+    const m0 = new Map([['a', lt('a', 1)]]);
+    const m1 = applyEvent(m0, { type: 'command', itemId: 'a', action: 'start' });
+    expect([...m1.entries()]).toEqual([...m0.entries()]);
+  });
 });
 
 describe('sortLiveSet', () => {
@@ -321,6 +332,9 @@ export interface LiveTitle {
 }
 
 export function applyEvent(map: Map<string, LiveTitle>, event: BroadcastEvent): Map<string, LiveTitle> {
+  // command events are imperative + fire-and-forget: never part of the set
+  if (event.type === 'command') return map;
+
   const next = new Map(map);
   if (event.type === 'show') {
     next.set(event.itemId, {
@@ -345,7 +359,7 @@ export function sortLiveSet(map: Map<string, LiveTitle>): LiveTitle[] {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run test/broadcast/liveSet.test.ts`
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -955,6 +969,155 @@ git commit -m "feat(api): per-item hide-air route"
 
 ---
 
+### Task 10b: Update route (both channels) + Command route (one channel)
+
+**Files:**
+- Create: `app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/update/route.ts`
+- Create: `app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/command/route.ts`
+- Test: `test/api/update-command-routes.test.ts`
+
+**Interfaces:**
+- Consumes: `db`, `rundownItems`, `requireSession`, `publish`, `getTitleRegistry`.
+- Produces:
+  - `update`: `POST` → re-reads the item and publishes `update` to **both** `preview` and `air` (the widget UPDATE button). `204`.
+  - `command`: `POST` body `{ action: string; channel: 'preview' | 'air'; payload?: unknown }` → validates `action` against the title's **declared actions** (`registry[titleKey].actions`), rejects unknown with `400`, else publishes `command` on that channel. `204`.
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+// test/api/update-command-routes.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const publish = vi.fn();
+const findFirst = vi.fn();
+
+vi.mock('@/lib/auth', () => ({ requireSession: vi.fn().mockResolvedValue({ user: { id: 'u1' } }) }));
+vi.mock('@/lib/broadcast/bus', () => ({ publish }));
+vi.mock('@/db', () => ({ db: { query: { rundownItems: { findFirst: (...a: unknown[]) => findFirst(...a) } } } }));
+vi.mock('@/db/schema', () => ({ rundownItems: {} }));
+vi.mock('@/lib/titles/registry', () => ({
+  getTitleRegistry: vi.fn().mockResolvedValue({ 'opening-timer': { actions: ['start', 'stop', 'reset'] } }),
+}));
+
+import { POST as UPDATE } from '@/app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/update/route';
+import { POST as COMMAND } from '@/app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/command/route';
+
+const ctx = { params: { projectId: 'p1', rundownId: 'r1', itemId: 'i1' } };
+const post = (body?: unknown) =>
+  new Request('http://t', { method: 'POST', body: body ? JSON.stringify(body) : undefined });
+
+beforeEach(() => { publish.mockClear(); findFirst.mockClear(); });
+
+describe('update route', () => {
+  it('publishes update on BOTH channels', async () => {
+    findFirst.mockResolvedValue({ id: 'i1', titleKey: 'opening-timer', layer: 1, position: 0, data: { x: 1 } });
+    const res = await UPDATE(post(), ctx);
+    expect(res.status).toBe(204);
+    expect(publish.mock.calls.map((c) => c[1])).toEqual(['preview', 'air']);
+    expect(publish.mock.calls[0][2]).toMatchObject({ type: 'update', itemId: 'i1', data: { x: 1 } });
+  });
+});
+
+describe('command route', () => {
+  it('publishes a declared action on the requested channel only', async () => {
+    findFirst.mockResolvedValue({ id: 'i1', titleKey: 'opening-timer' });
+    const res = await COMMAND(post({ action: 'start', channel: 'air' }), ctx);
+    expect(res.status).toBe(204);
+    expect(publish).toHaveBeenCalledWith('r1', 'air', { type: 'command', itemId: 'i1', action: 'start', payload: undefined });
+  });
+
+  it('rejects an action the title did not declare', async () => {
+    findFirst.mockResolvedValue({ id: 'i1', titleKey: 'opening-timer' });
+    const res = await COMMAND(post({ action: 'explode', channel: 'air' }), ctx);
+    expect(res.status).toBe(400);
+    expect(publish).not.toHaveBeenCalled();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run test/api/update-command-routes.test.ts`
+Expected: FAIL — route modules not found.
+
+- [ ] **Step 3: Implement both routes**
+
+```ts
+// app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/update/route.ts
+import { db } from '@/db';
+import { rundownItems } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { requireSession } from '@/lib/auth';
+import { publish } from '@/lib/broadcast/bus';
+
+type Ctx = { params: { projectId: string; rundownId: string; itemId: string } };
+
+export async function POST(_req: Request, { params }: Ctx) {
+  await requireSession();
+  const item = await db.query.rundownItems.findFirst({
+    where: and(eq(rundownItems.id, params.itemId), eq(rundownItems.rundownId, params.rundownId)),
+  });
+  if (!item) return new Response('Not found', { status: 404 });
+
+  const event = {
+    type: 'update' as const, itemId: item.id, layer: item.layer, position: item.position, data: item.data,
+  };
+  publish(params.rundownId, 'preview', event);
+  publish(params.rundownId, 'air', event);
+  return new Response(null, { status: 204 });
+}
+```
+
+```ts
+// app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/command/route.ts
+import { db } from '@/db';
+import { rundownItems } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { requireSession } from '@/lib/auth';
+import { publish } from '@/lib/broadcast/bus';
+import { getTitleRegistry } from '@/lib/titles/registry';
+import { z } from 'zod';
+
+const bodySchema = z.object({
+  action: z.string().min(1),
+  channel: z.enum(['preview', 'air']),
+  payload: z.unknown().optional(),
+});
+
+type Ctx = { params: { projectId: string; rundownId: string; itemId: string } };
+
+export async function POST(req: Request, { params }: Ctx) {
+  await requireSession();
+  const { action, channel, payload } = bodySchema.parse(await req.json());
+
+  const item = await db.query.rundownItems.findFirst({
+    where: and(eq(rundownItems.id, params.itemId), eq(rundownItems.rundownId, params.rundownId)),
+  });
+  if (!item) return new Response('Not found', { status: 404 });
+
+  const registry = await getTitleRegistry(params.projectId);
+  const declared: string[] = registry[item.titleKey]?.actions ?? [];
+  if (!declared.includes(action)) return new Response('Unknown action', { status: 400 });
+
+  publish(params.rundownId, channel, { type: 'command', itemId: item.id, action, payload });
+  return new Response(null, { status: 204 });
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run test/api/update-command-routes.test.ts`
+Expected: PASS (3 tests).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/update app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/command test/api/update-command-routes.test.ts
+git commit -m "feat(api): update route (both channels) and validated command route"
+```
+
+---
+
 ### Task 11: `useTitleStream` returns a set; `TitleRenderer` renders the stack
 
 **Files:**
@@ -968,6 +1131,8 @@ git commit -m "feat(api): per-item hide-air route"
 - Produces: `useTitleStream(rundownId, channel): LiveTitle[]` (consumed by `/air`, `/preview`, and the controller in Task 12); `TitleRenderer({ titles, packageLabel })`.
 
 > The reducer logic is already unit-tested in Task 4. Here we test the hook's wiring (EventSource → reducer → sorted set) with a fake `EventSource`. The snapshot replay (Task 6) arrives as ordinary `show` events, so no extra hook logic is needed for reload recovery.
+>
+> **Command events:** `applyEvent` already ignores them, so they cannot corrupt the set — the hook stays correct with no extra code. *Delivering* commands to the rendered component (the `onCommand` handler) belongs to the title-contract work (`2026-06-21-title-contract-and-thread-widgets-design.md`) and is **not** built here.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1321,7 +1486,9 @@ git commit -m "docs: multi-layer preview→air with reload recovery"
 **Spec coverage:**
 - Two composition buses (Preview/Air) → Tasks 9, 10, 8, 11. ✅
 - Additive take + full-screen-clears-Air rule → `computeTake` (Task 7) + `/take` route (Task 8). ✅
-- Rule computed once, server-side → Tasks 7–8. ✅
+- Rule computed once, server-side → Tasks 7–8; a per-item `air` action reuses `/take` with `stagedItemIds:[itemId]`, so there is no second code path. ✅
+- `command` event variant, not snapshotted → Task 3 (type), Task 4 (`applyEvent` ignores it + test), Task 10b (`/command` route with declared-action validation). ✅
+- UPDATE resends `data` to both channels → Task 10b (`/update` route). ✅
 - Renderers become a set-reducer → Tasks 4, 11. ✅
 - Explicit `layer` (0–10), z-order `(layer, position)`, carried in payload → Tasks 1, 2, 3, 4, 8, 9, 11, 12. ✅
 - **Reload recovery (stateful bus snapshot + replay-on-connect)** → Tasks 5, 6; admin recovery via SSE-derived sets → Task 12. ✅
@@ -1332,7 +1499,7 @@ git commit -m "docs: multi-layer preview→air with reload recovery"
 
 **Out of scope (per spec), intentionally absent:** "Clear all/panic", DB-persisted state (server-restart survival), transition animations, multi-channel. ✅
 
-**Type consistency:** `BroadcastEvent` (Task 3, no `rundownId`) is consumed by `applyEvent` (Task 4), the bus snapshot (Task 5), the stream route (Task 6), and all routes (Tasks 8–10). `LiveTitle` (Task 4) is returned by `getSnapshot` (Task 5) and `useTitleStream` (Task 11) and consumed by `TitleRenderer` (Task 11). `StagedItem`/`TakeResult` (Task 7) match the `/take` mapping (Task 8). `getSnapshot(rundownId, channel)` signature matches across Tasks 5, 6, 8. `takeRundown` mutation body `{ stagedItemIds }` (Task 12) matches the `/take` body schema (Task 8). `layerSchema` (Task 2) reused in Task 12's form. `WidgetRow` props (Task 12 test) match its implementation. ✅
+**Type consistency:** `BroadcastEvent` (Task 3, no `rundownId`, 4 variants incl. `command`) is consumed by `applyEvent` (Task 4), the bus snapshot (Task 5), the stream route (Task 6), and all routes (Tasks 8–10b). The `/command` route reads `registry[titleKey].actions`, matching the registry shape the title-contract spec defines. `LiveTitle` (Task 4) is returned by `getSnapshot` (Task 5) and `useTitleStream` (Task 11) and consumed by `TitleRenderer` (Task 11). `StagedItem`/`TakeResult` (Task 7) match the `/take` mapping (Task 8). `getSnapshot(rundownId, channel)` signature matches across Tasks 5, 6, 8. `takeRundown` mutation body `{ stagedItemIds }` (Task 12) matches the `/take` body schema (Task 8). `layerSchema` (Task 2) reused in Task 12's form. `WidgetRow` props (Task 12 test) match its implementation. ✅
 
 **Placeholder scan:** none — every code/test step carries real content.
 

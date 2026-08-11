@@ -49,28 +49,51 @@ export const meta = {
 ```tsx
 // projects/atl/titles/lower-third/index.tsx
 import type { LowerThirdData } from './model';
+import styles from './LowerThird.module.scss';
 
 export default function LowerThird({ data }: { data: LowerThirdData }) {
   return (
-    <div className="fixed bottom-16 left-16 flex items-baseline gap-4 px-6 py-3
-                    bg-secondary/90 backdrop-blur-sm border-l-4 border-primary">
-      <span className="font-display text-5xl text-white">
-        {data.playerName}
-      </span>
-      {data.teamName && (
-        <span className="font-body text-xl text-accent uppercase tracking-wider">
-          {data.teamName}
-        </span>
-      )}
+    <div className={styles.root}>
+      <span className={styles.name}>{data.playerName}</span>
+      {data.teamName && <span className={styles.team}>{data.teamName}</span>}
     </div>
   );
+}
+```
+
+```scss
+// projects/atl/titles/lower-third/LowerThird.module.scss
+.root {
+  position: fixed;
+  bottom: 4rem;
+  left: 4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-secondary);
+  border-left: 4px solid var(--color-primary);
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  color: #fff;
+}
+
+.team {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 ```
 
 A title:
 - Receives a single `data` prop, typed as the inferred `z.infer<typeof model>`.
 - Renders absolutely-positioned content (it sits over a transparent OBS browser source).
-- Uses **only Tailwind utilities** and CSS variables — never raw font-family strings, never inline hex colors.
+- Uses **only SCSS modules** (`.module.scss`) and CSS variables — never raw font-family strings, never inline hex colors, never MUI.
 
 ### `settings.ts` — presentation settings
 
@@ -122,8 +145,8 @@ These folders are copied to `public/projects/<label>/assets/titles/...` by the a
 
 ## Styling rules
 
-1. **Tailwind only.** MUI is not available inside title components — the Tailwind `content` glob covers `app/` and `projects/**/titles/**` exclusively.
-2. **Brand colors and fonts come from CSS variables defined in `project.css`.** Use the Tailwind utilities mapped to those variables (`font-display`, `text-primary`, `bg-secondary`, etc.). Never `style={{ color: '#ff4d2e' }}`.
+1. **SCSS modules only.** MUI is not available inside title components. Each title imports its own `*.module.scss` sibling; there is no Tailwind in this repo.
+2. **Brand colors and fonts come from CSS variables defined in `project.css`.** Consume them directly with `var(…)` — `font-family: var(--font-display)`, `color: var(--color-primary)`. Never `style={{ color: '#ff4d2e' }}`, never a literal hex in the SCSS.
 3. **Position absolutely.** Titles render onto a transparent canvas. Use `fixed inset-0`, `absolute`, or specific corners (`fixed bottom-16 left-16`). Avoid `flex`/`grid` layout at the root — there's no parent container to flex against in OBS.
 4. **`font-display: block` is set in `project.css`** so titles never paint with a fallback font in broadcast.
 5. **Stay self-contained.** A title may import its own subcomponents from the same folder, but **never** from outside `projects/<slug>/titles/<this-title>/`. That keeps title boundaries clean and makes it safe to copy a title between projects.

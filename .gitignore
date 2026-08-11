@@ -26,8 +26,12 @@ yarn-error.log*
 # Misc
 *.tsbuildinfo
 .netlify/
+deno.lock
 coverage
 next-env.d.ts
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Derived: synced from projects/*/{assets,styles}
+public/projects/

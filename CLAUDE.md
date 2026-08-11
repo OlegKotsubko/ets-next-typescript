@@ -28,7 +28,7 @@ There is no test runner specified in the docs yet; titles are iterated visually 
 
 ## Tech stack
 
-Next.js 15 (App Router) · React 19 · TypeScript · better-auth-next (email+password) · Zod · React Hook Form (admin forms, `zodResolver`) · Drizzle ORM + Neon Postgres (`@neondatabase/serverless` HTTP driver) · MUI (admin only) · SCSS (title components only) · Redux Toolkit + RTK Query · Netlify (`@netlify/plugin-nextjs`). Full rationale: `docs/tech-stack.md`.
+Next.js 16 (App Router) · React 19 · TypeScript · better-auth (email+password) · Zod · React Hook Form (admin forms, `zodResolver`) · Drizzle ORM + Neon Postgres (`@neondatabase/serverless` HTTP driver) · MUI (admin only) · SCSS (title components only) · Redux Toolkit + RTK Query · Netlify (`@netlify/plugin-nextjs`). Full rationale: `docs/tech-stack.md`.
 
 ## Architecture: the load-bearing decisions
 
@@ -51,7 +51,7 @@ These are the patterns that span multiple files. Internalize them before writing
 ## Route map
 
 - `/login` (public) — only public admin page.
-- `/admin` (gallery + **Add Project**), `/admin/[projectId]/{data,overlays,overlays/[rundownId]}` (protected via `middleware.ts` gating `/admin/*` and `/api/projects/*`). Workspace nav is two links: **Data** and **Overlays** (Overlays = the rundown/controller system; underlying tables keep the `rundowns`/`rundown_items` names).
+- `/admin` (gallery + **Add Project**), `/admin/[projectId]/{data,overlays,overlays/[rundownId]}` (protected via `proxy.ts` — Next 16's rename of `middleware.ts` — gating `/admin/*` and `/api/projects/*`). Workspace nav is two links: **Data** and **Overlays** (Overlays = the rundown/controller system; underlying tables keep the `rundowns`/`rundown_items` names).
 - `/preview/[rundownId]`, `/air/[rundownId]` (**public** — OBS/vMix browser sources; rundown IDs are unguessable UUIDs, treated as share-link tokens, not secrets). These pages do **not** use Redux — everything flows through the SSE `data` prop.
 - `/api/projects` (`POST` create / `GET` list) · `/api/projects/[projectId]/...` (protected REST) · `/api/broadcast/[rundownId]/stream?channel=preview|air` (public SSE, Edge).
 

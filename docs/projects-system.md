@@ -225,43 +225,29 @@ projects/atl/assets/fonts/ATLBody.woff2
 
 > Use `font-display: block` (not `swap`) in broadcast contexts so the title never paints with a fallback font.
 
-### 3. Map the variables in Tailwind
+### 3. Consume the variables in the title's SCSS module
 
-```ts
-// tailwind.config.ts
-import type { Config } from 'tailwindcss';
+Titles are styled with **SCSS modules + CSS variables only** — no Tailwind, no MUI,
+no inline hex, no raw `font-family` (see [tech-stack.md](./tech-stack.md#what-we-deliberately-did-not-use)).
+The variables declared in `project.css` are read directly with `var(…)`:
 
-export default {
-  content: [
-    './app/**/*.{ts,tsx}',
-    './projects/**/titles/**/*.{ts,tsx}',
-  ],
-  theme: {
-    extend: {
-      fontFamily: {
-        display: ['var(--font-display)'],
-        body: ['var(--font-body)'],
-      },
-      colors: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
-      },
-    },
-  },
-} satisfies Config;
+```scss
+// projects/atl/titles/lower-third/LowerThird.module.scss
+.name {
+  font-family: var(--font-display);
+  color: var(--color-primary);
+  font-size: 6rem;
+}
 ```
 
-### 4. Use the utilities in titles
+### 4. Use the classes in titles
 
 ```tsx
 // projects/atl/titles/lower-third/index.tsx
+import styles from './LowerThird.module.scss';
+
 export default function LowerThird({ data }: { data: LowerThirdData }) {
-  return (
-    <div className="font-display text-primary text-6xl">
-      {data.playerName}
-    </div>
-  );
+  return <div className={styles.name}>{data.playerName}</div>;
 }
 ```
 

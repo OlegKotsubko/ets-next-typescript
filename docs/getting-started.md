@@ -4,7 +4,7 @@ A 10-minute path from clone to a working dev server with a sample project showin
 
 ## Prerequisites
 
-- **Node.js 20+** (Next.js 15 minimum).
+- **Node.js 20.9+** (Next.js 16 minimum).
 - **A Neon account** — free tier is fine. Create a project and copy its connection string.
 - **OBS Studio** (or vMix) if you want to verify the broadcast pipeline end-to-end.
 
@@ -30,7 +30,7 @@ cp .env.example .env.local
 # Neon dev database
 DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require"
 
-# better-auth-next
+# better-auth
 BETTER_AUTH_SECRET="<random 32-byte hex — generate with `openssl rand -hex 32`>"
 BETTER_AUTH_URL="http://localhost:3000"
 ```
@@ -103,3 +103,13 @@ Now clicking AIR in the admin controller will show the title in OBS. See [previe
 - **Login form rejects valid credentials** — `BETTER_AUTH_URL` doesn't match the origin you're loading the app from, or `BETTER_AUTH_SECRET` is empty. See [auth.md](./auth.md#troubleshooting).
 - **`/air/<id>` shows a blank page in OBS** — open the URL in a regular browser first to check for errors. The most common cause is a rundown ID that doesn't exist, or a project whose `project_label` points at a missing overlay-package folder. See [preview-air.md](./preview-air.md#troubleshooting).
 - **Fonts don't load in OBS** — check that `public/projects/<slug>/assets/fonts/` exists after running `npm run dev:assets`. See [projects-system.md](./projects-system.md#font-pipeline).
+
+## Working on asset-related features
+
+Any work touching Project Assets, or any entity with an image/video field (Players, Talents, Teams, Sponsors), needs Netlify Blobs, which only works under `netlify dev` — not plain `next dev`. Run:
+
+```bash
+npx netlify dev
+```
+
+instead of `npm run dev` when working in this area. Everything else in the app works the same either way.

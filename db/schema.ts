@@ -1,5 +1,5 @@
 import {
-  pgEnum, pgTable, uuid, text, date, timestamp, integer, jsonb, index, boolean,
+  pgEnum, pgTable, uuid, text, date, timestamp, integer, jsonb, index, boolean, uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
@@ -105,3 +105,117 @@ export const rundownItems = pgTable('rundown_items', {
   position: integer('position').notNull(),
   data: jsonb('data').$type<Record<string, unknown>>().notNull(), // validated against the title's model.ts
 }, (t) => [index('rundown_items_rundown_idx').on(t.rundownId, t.position)])
+
+// --- Data entities ---------------------------------------------------------
+
+export const assets = pgTable('assets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  filename: text('filename').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  url: text('url').notNull(),
+  kind: text('kind').notNull(), // 'logo' | 'photo' | 'graphic' | 'other'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('assets_project_idx').on(t.projectId)])
+
+export const players = pgTable('players', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  surname: text('surname'),
+  nickname: text('nickname'),
+  avatarAssetId: uuid('avatar_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  imageAssetId: uuid('image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  leftImageAssetId: uuid('left_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rightImageAssetId: uuid('right_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rosterAssetId: uuid('roster_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rosterLeftAssetId: uuid('roster_left_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rosterRightAssetId: uuid('roster_right_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  extra: jsonb('extra').$type<Record<string, string>>().notNull().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('players_project_idx').on(t.projectId)])
+
+export const talents = pgTable('talents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  surname: text('surname'),
+  nickname: text('nickname'),
+  avatarAssetId: uuid('avatar_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  leftImageAssetId: uuid('left_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rightImageAssetId: uuid('right_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rosterAssetId: uuid('roster_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rosterLeftAssetId: uuid('roster_left_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rosterRightAssetId: uuid('roster_right_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  extra: jsonb('extra').$type<Record<string, string>>().notNull().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('talents_project_idx').on(t.projectId)])
+
+export const teams = pgTable('teams', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  avatarAssetId: uuid('avatar_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  leftImageAssetId: uuid('left_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  rightImageAssetId: uuid('right_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  bigAvatarAssetId: uuid('big_avatar_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('teams_project_idx').on(t.projectId)])
+
+export const teamPlayers = pgTable('team_players', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  playerId: uuid('player_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  slot: integer('slot').notNull(),
+  isCaptain: boolean('is_captain').notNull().default(false),
+  isStandIn: boolean('is_stand_in').notNull().default(false),
+}, (t) => [
+  index('team_players_team_idx').on(t.teamId, t.slot),
+  uniqueIndex('team_players_unique').on(t.teamId, t.playerId),
+])
+
+export const videos = pgTable('videos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  url: text('url').notNull(),
+  durationMs: integer('duration_ms'),
+  loop: boolean('loop').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('videos_project_idx').on(t.projectId)])
+
+export const sponsors = pgTable('sponsors', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  position: text('position'),
+  imageAssetId: uuid('image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  bigImageAssetId: uuid('big_image_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  videoId: uuid('video_id').references(() => videos.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('sponsors_project_idx').on(t.projectId)])
+
+export const brackets = pgTable('brackets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  format: text('format').notNull().default('single-elim'),
+  participantCount: integer('participant_count').notNull(),
+  rounds: jsonb('rounds').$type<unknown[]>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('brackets_project_idx').on(t.projectId)])
+
+export const projectCss = pgTable('project_css', {
+  projectId: uuid('project_id').primaryKey().references(() => projects.id, { onDelete: 'cascade' }),
+  css: text('css').notNull().default(''),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})

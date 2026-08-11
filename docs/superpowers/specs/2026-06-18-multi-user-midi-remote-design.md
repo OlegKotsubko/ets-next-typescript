@@ -119,7 +119,7 @@ midi_bindings
   subscriber_id   uuid not null references users(id)        -- whose listing
   rundown_id      uuid not null references rundowns(id) on delete cascade
   rundown_item_id uuid not null references rundown_items(id) on delete cascade
-  action          enum('show','hide','update') not null
+  action          text not null                             -- validated, not an enum (see below)
   midi_note       integer not null
   midi_channel    integer not null default 0
   label           text
@@ -131,12 +131,46 @@ Owned by the subscriber, scoped to a rundown. `update` re-pushes the title's
 current `data` ("Live Update"). Multiple notes may target the same title with
 different verbs.
 
+> **`action` is validated text, not a Postgres enum.** Since the
+> [title contract](./2026-06-21-title-contract-and-thread-widgets-design.md), a
+> title **declares its own command actions** (`start`, `stop`, `reset`, …)
+> alongside the universal ones. That set is dynamic per title, so it cannot be a
+> fixed DDL enum. Validate `action` at **bind-time and trigger-time** against the
+> bound title's declared actions —
+> `['air', 'hide', 'update', ...registry[titleKey].actions]` — rejecting anything
+> else with `400`. (This replaces the earlier `midi_action` enum; there is no
+> `midi_action` type to create.)
+>
+> **`midi_channel` is the MIDI hardware channel** (0–15), unrelated to the
+> broadcast `preview`/`air` channel.
+
+### MIDI is air-only
+
+**Bound notes fire only in the AIR environment** — a note never targets Preview.
+Bindings therefore carry **no broadcast-channel column**; the trigger endpoint
+always publishes on `air`. Preview remains mouse-driven from the control page.
+
+Action → route mapping (all reuse the routes from the multi-layer design; MIDI
+adds no parallel publish path):
+
+| bound `action` | fires |
+|---|---|
+| `air` | `POST .../take` with `stagedItemIds: [rundownItemId]` (single-item take, full-screen rule applies) |
+| `hide` | `POST .../items/[itemId]/hide-air` |
+| `update` | `POST .../items/[itemId]/update` |
+| any declared command (`start`, `stop`, …) | `POST .../items/[itemId]/command` with `channel: 'air'` |
+
 ### Migration scope
 
-One migration: **seed the single project row** + **add `rundowns.owner_id`** +
-**create `subscriptions`, `rundown_grants`, `midi_bindings`** (with the two enums
-`subscription_status`, `midi_action`). Workflow: edit `db/schema.ts` →
-`db:generate` → commit SQL → `db:migrate` (dev then prod).
+One migration: **create `subscriptions`, `rundown_grants`, `midi_bindings`** (with
+the `subscription_status` enum only — `midi_bindings.action` is validated text,
+not an enum). Workflow: edit `db/schema.ts` → `db:generate` → commit SQL →
+`db:migrate` (dev then prod).
+
+> **Superseded:** earlier drafts also seeded a single project row and added
+> `rundowns.owner_id` here. The base app is **multi-project** (`/admin` gallery +
+> `POST /api/projects`) and lands `owner_id` in its own schema stage — see
+> `2026-06-18-base-app-scope.md`. No project seeding happens in this migration.
 
 ## API surface
 
@@ -220,9 +254,10 @@ caster2 browser (Web MIDI): noteon → look up local binding
   → POST /api/rundowns/[rundownId]/trigger { rundownItemId, action }
        server:
          - authz check (above)
-         - validate action; for 'update', re-read the item's data jsonb and
-           re-parse against the title's model.ts
-         - bus.publish(rundownId, { type: action, ... })   // same bus as admin AIR
+         - validate action against ['air','hide','update', ...title's declared actions]
+         - dispatch to the SAME handler the control page uses (air → single-item
+           take; hide → hide-air; update → re-read + re-parse data; command →
+           publish a command event), always on the 'air' channel
   → SSE → /air repaints
 ```
 
@@ -230,8 +265,11 @@ Design notes:
 
 - **Trigger is Node, not Edge** — needs session + DB. Consistent with
   `deployment.md` (Node default; Edge only for streaming).
-- **Both caster1 (admin AIR) and caster2 (MIDI) publish to the same bus.** With
-  "one on-air title per rundown," last action wins — no merge logic.
+- **Both caster1 (admin AIR) and caster2 (MIDI) publish to the same bus**, on the
+  **air** channel. Air is now a **layered set** (multi-layer design), so actions
+  compose rather than overwrite: a MIDI `air` adds that item to the live set (or
+  clears it first if the item is full-screen), and `hide` removes exactly one
+  item. Both surfaces read the same bus snapshot, so they stay in sync.
 - **Binding lookup is client-side** — the subscriber's page loads its bindings
   once, so a note press is an O(1) local map hit followed by a single authorized
   POST. Keeps live latency low.
@@ -249,10 +287,12 @@ Design notes:
   toggle per-rundown grants.
 - **Subscriber MIDI-player page `/midi/[rundownId]` (subscriber-only)** —
   connects the controller, lists bindings with **note-learn** ("press a pad to
-  assign"), a connection indicator, and per-row show/hide/update buttons as a
-  no-hardware fallback. Subscriber-facing entry point also needs a way to
+  assign"), a connection indicator, and per-row buttons for that binding's action
+  (`air` / `hide` / `update` / the title's declared commands) as a no-hardware
+  fallback. Subscriber-facing entry point also needs a way to
   request a subscription and see granted rundowns (`/api/subscriptions/mine`).
-- **`/preview` and `/air`** — unchanged; still public, still SSE `data` prop only.
+- **`/preview` and `/air`** — unchanged by this feature; still public, still fed
+  purely by SSE (now a layered *set* per the multi-layer design, not one title).
 
 ## RTK Query / state
 

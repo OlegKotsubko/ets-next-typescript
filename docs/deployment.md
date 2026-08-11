@@ -93,7 +93,7 @@ The Netlify plugin maps this automatically. No `netlify.toml` change needed.
 
 Other routes stay on the default Node runtime so they can use:
 - `@neondatabase/serverless` (works on Edge too, but Node is fine and gives us full Node APIs).
-- `better-auth-next` (Node-only in some auth flows).
+- `better-auth` (Node-only in some auth flows).
 - File-system access in the project sync script (Node-only).
 
 ## 5. Build pipeline
