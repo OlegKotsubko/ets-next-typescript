@@ -3,23 +3,43 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   Box, Typography, Button, Card, CardActionArea, CardContent,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { useListProjectsQuery, useCreateProjectMutation } from '@/store/apis/projectsApi'
 import { useListOverlayPackagesQuery } from '@/store/apis/overlayPackagesApi'
 import SignOutButton from './SignOutButton'
 
+function getErrorMessage(err: unknown): string {
+  if (err && typeof err === 'object') {
+    if ('data' in err) {
+      const data = (err as { data?: unknown }).data
+      if (data && typeof data === 'object' && 'message' in data && typeof (data as { message?: unknown }).message === 'string') {
+        return (data as { message: string }).message
+      }
+      if (typeof data === 'string') return data
+    }
+    if ('error' in err && typeof (err as { error?: unknown }).error === 'string') {
+      return (err as { error: string }).error
+    }
+    if ('message' in err && typeof (err as { message?: unknown }).message === 'string') {
+      return (err as { message: string }).message
+    }
+  }
+  return 'Failed to create project. Please try again.'
+}
+
 export default function AdminGallery({ userEmail }: { userEmail: string }) {
   const { data: projects = [] } = useListProjectsQuery()
   const { data: packages = [] } = useListOverlayPackagesQuery()
-  const [createProject] = useCreateProjectMutation()
+  const [createProject, { isLoading }] = useCreateProjectMutation()
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [mode, setMode] = useState<'team_vs_team' | 'player_vs_player'>('team_vs_team')
   const [label, setLabel] = useState('')
   const [eventDate, setEventDate] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
 
   function resetForm() {
     setName('')
@@ -28,15 +48,25 @@ export default function AdminGallery({ userEmail }: { userEmail: string }) {
     setEventDate('')
   }
 
-  async function handleCreate() {
-    await createProject({
-      name,
-      mode,
-      label,
-      ...(eventDate ? { eventDate } : {}),
-    })
-    resetForm()
+  function closeDialog() {
     setOpen(false)
+    setCreateError(null)
+  }
+
+  async function handleCreate() {
+    setCreateError(null)
+    try {
+      await createProject({
+        name,
+        mode,
+        label,
+        ...(eventDate ? { eventDate } : {}),
+      }).unwrap()
+      resetForm()
+      setOpen(false)
+    } catch (err) {
+      setCreateError(getErrorMessage(err))
+    }
   }
 
   return (
@@ -97,13 +127,16 @@ No projects yet — click Add Project to create one.
       </Grid>
 
       <Dialog open={open}
-        onClose={() => setOpen(false)}
+        onClose={closeDialog}
         fullWidth
         maxWidth="sm">
         <DialogTitle>
 Add Project
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          {createError && <Alert severity="error">
+            {createError}
+          </Alert>}
           <TextField label="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -144,12 +177,12 @@ Player vs Player
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>
+          <Button onClick={closeDialog}>
 Cancel
           </Button>
           <Button variant="contained"
             onClick={handleCreate}
-            disabled={!name || !label}>
+            disabled={!name || !label || isLoading}>
             Create
           </Button>
         </DialogActions>
