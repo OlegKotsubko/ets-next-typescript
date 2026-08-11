@@ -15,6 +15,13 @@
       "when": 1782904720676,
       "tag": "0001_seed_singleton_project",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783072241763,
+      "tag": "0002_smooth_mattie_franklin",
+      "breakpoints": true
     }
   ]
 }
