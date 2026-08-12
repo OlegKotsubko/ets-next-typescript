@@ -11,6 +11,7 @@ import { bracketsApi } from './apis/bracketsApi'
 import { projectCssApi } from './apis/projectCssApi'
 import { projectsApi } from './apis/projectsApi'
 import { overlayPackagesApi } from './apis/overlayPackagesApi'
+import { rundownsApi } from './apis/rundownsApi'
 
 const rootReducer = combineReducers({
   editor,
@@ -24,6 +25,7 @@ const rootReducer = combineReducers({
   [projectCssApi.reducerPath]: projectCssApi.reducer,
   [projectsApi.reducerPath]: projectsApi.reducer,
   [overlayPackagesApi.reducerPath]: overlayPackagesApi.reducer,
+  [rundownsApi.reducerPath]: rundownsApi.reducer,
 })
 
 const entityMiddleware = [
@@ -37,6 +39,7 @@ const entityMiddleware = [
   projectCssApi.middleware,
   projectsApi.middleware,
   overlayPackagesApi.middleware,
+  rundownsApi.middleware,
 
 ] as any[]
 
