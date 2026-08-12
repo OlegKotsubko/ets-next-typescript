@@ -7,6 +7,13 @@ vi.mock('@/lib/auth', () => ({ auth: { api: { getSession: (...args: unknown[]) =
 const dbMock = { select: vi.fn() }
 vi.mock('@/db', () => ({ db: dbMock }))
 
+vi.mock('drizzle-orm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('drizzle-orm')>()
+  return { ...actual, eq: vi.fn(actual.eq), and: vi.fn(actual.and) }
+})
+
+const { and, eq } = await import('drizzle-orm')
+const { rundowns } = await import('@/db/schema')
 const { GET } = await import('@/app/api/projects/[projectId]/rundowns/[id]/route')
 
 const PROJECT_A = '11111111-1111-1111-1111-111111111111'
@@ -34,6 +41,9 @@ describe('GET /api/projects/[projectId]/rundowns/[id]', () => {
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) })
     const res = await GET(req(), ctx())
     expect(res.status).toBe(404)
+    expect(eq).toHaveBeenCalledWith(rundowns.id, ROW_ID)
+    expect(eq).toHaveBeenCalledWith(rundowns.projectId, PROJECT_A)
+    expect(and).toHaveBeenCalledTimes(1)
   })
 
   it('returns 200 and the row when found', async () => {
@@ -43,5 +53,8 @@ describe('GET /api/projects/[projectId]/rundowns/[id]', () => {
     const res = await GET(req(), ctx())
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual(row)
+    expect(eq).toHaveBeenCalledWith(rundowns.id, ROW_ID)
+    expect(eq).toHaveBeenCalledWith(rundowns.projectId, PROJECT_A)
+    expect(and).toHaveBeenCalledTimes(1)
   })
 })

@@ -8,6 +8,13 @@ vi.mock('@/lib/auth', () => ({ auth: { api: { getSession: (...args: unknown[]) =
 const dbMock = { select: vi.fn(), insert: vi.fn() }
 vi.mock('@/db', () => ({ db: dbMock }))
 
+vi.mock('drizzle-orm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('drizzle-orm')>()
+  return { ...actual, eq: vi.fn(actual.eq), and: vi.fn(actual.and) }
+})
+
+const { eq } = await import('drizzle-orm')
+const { rundowns } = await import('@/db/schema')
 const { GET, POST } = await import('@/app/api/projects/[projectId]/rundowns/route')
 
 const PROJECT_A = '11111111-1111-1111-1111-111111111111'
@@ -36,6 +43,7 @@ describe('GET/POST /api/projects/[projectId]/rundowns', () => {
     const res = await GET(req(undefined, 'GET'), ctx())
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual(rows)
+    expect(eq).toHaveBeenCalledWith(rundowns.projectId, PROJECT_A)
   })
 
   it('POST returns 401 with no session', async () => {
