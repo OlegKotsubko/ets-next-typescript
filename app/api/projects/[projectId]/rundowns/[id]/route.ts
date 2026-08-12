@@ -15,4 +15,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ projectI
   return Response.json(row)
 }
 
-export const { PATCH, DELETE } = createCrudHandlers({ table: rundowns, createSchema: createRundownSchema, updateSchema: updateRundownSchema })
+export const { PATCH, DELETE } = createCrudHandlers({
+  table: rundowns, createSchema: createRundownSchema, updateSchema: updateRundownSchema,
+})
