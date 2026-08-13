@@ -295,34 +295,34 @@ Title code is now **brand-agnostic**. To re-skin a project, edit `project.css`; 
 
 ### 5. Load `project.css` in `/preview` and `/air` layouts
 
-The Preview/Air layouts inject the right `project.css` based on the rundown's `project_id`:
+The Preview/Air layouts inject the right `project.css` based on the rundown's `project_id`, via the shared `getBroadcastContext` query (`lib/broadcast/getBroadcastContext.ts` — one `db.select().innerJoin(...)` call, not `db.query.rundowns.findFirst({ with: {...} })`; this schema has no `relations()` definitions, so the relational-query API isn't available):
 
 ```tsx
 // app/(broadcast)/preview/[rundownId]/layout.tsx
-import { db } from '@/db';
-import { rundowns, projects } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { getBroadcastContext } from '@/lib/broadcast/getBroadcastContext';
+import { PackageLabelProvider } from '@/lib/broadcast/PackageLabelContext';
 
 export default async function PreviewLayout({
   children, params,
-}: { children: React.ReactNode; params: { rundownId: string } }) {
-  const rundown = await db.query.rundowns.findFirst({
-    where: eq(rundowns.id, params.rundownId),
-    with: { project: true },                  // need the project's label, not its UUID
-  });
-  if (!rundown) return <div>Rundown not found</div>;
+}: { children: React.ReactNode; params: Promise<{ rundownId: string }> }) {
+  const { rundownId } = await params;
+  const ctx = await getBroadcastContext(rundownId);
+  if (!ctx) return <div>Rundown not found</div>;
 
   return (
     <>
       {/* the folder is the package label, NOT the project UUID */}
-      <link rel="stylesheet" href={`/projects/${rundown.project.label}/styles/project.css`} />
-      {children}
+      <link rel="stylesheet" href={`/projects/${ctx.packageLabel}/styles/project.css`} />
+      {ctx.css && <style dangerouslySetInnerHTML={{ __html: ctx.css }} />}
+      <PackageLabelProvider packageLabel={ctx.packageLabel}>
+        {children}
+      </PackageLabelProvider>
     </>
   );
 }
 ```
 
-The same pattern is used for `/air/[rundownId]/layout.tsx`. **The asset path uses `project.label` (the package folder), never `projectId` (a UUID).** See [preview-air.md](./preview-air.md) for the SSE side.
+The same pattern is used for `/air/[rundownId]/layout.tsx`. **The asset path uses `project.label` (the package folder), never `projectId` (a UUID).** See [preview-air.md](./preview-air.md) for the full contract, including how `packageLabel` reaches the client page via `PackageLabelContext` and the SSE side.
 
 ## File-system vs database boundary
 

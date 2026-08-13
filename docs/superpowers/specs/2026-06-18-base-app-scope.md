@@ -16,8 +16,8 @@ This document only sequences it.
 | P1 database | ✅ done | `db/schema.ts` + migrations `0000`, `0001`, `0002` |
 | P2 auth | ✅ done | `lib/auth.ts`, `/login`, `/admin`, `proxy.ts` guard, `scripts/create-user.ts` |
 | P3 titles | ✅ done | shared `models/`, three-file title contract, build-time codegen registries (titles + packages), `default` package with two titles, `assets:sync`, `app/dev/title-preview` |
-| P4 bus + SSE | ⬜ **next** | — |
-| P5a admin shell | ⬜ | — |
+| P4 bus + SSE | ✅ done | `lib/broadcast/{liveSet,bus}.ts`, Edge SSE route with snapshot replay, `app/(broadcast)/{preview,air}/[rundownId]`, `app/(admin)`/`app/(broadcast)` route-group split |
+| P5a admin shell | ⬜ **next** | — |
 | P5b controller | ⬜ | already planned (14 tasks) |
 | P6 data CRUD · P7 deploy | ⬜ | — |
 
@@ -174,8 +174,8 @@ skip an incomplete title/package folder; `assets:sync` copies into
 
 **Plan:** `docs/superpowers/plans/2026-08-10-p3-title-system.md` (executed).
 
-### P4 — Broadcast bus + SSE + preview/air
-**Delivers:** publishing an event visibly shows/hides layered titles on `/air`,
+### P4 — Broadcast bus + SSE + preview/air ✅ done
+**Delivered:** publishing an event visibly shows/hides layered titles on `/air`,
 and reloading the window restores them.
 - `lib/broadcast/liveSet.ts` — `applyEvent` / `sortLiveSet` / `LiveTitle`
   (`command` events are ignored by the reducer).
@@ -185,9 +185,22 @@ and reloading the window restores them.
 - SSE Edge route `app/api/broadcast/[rundownId]/stream/route.ts`
   (`runtime = 'edge'`) that **replays the snapshot as `show` events on connect**,
   then streams live events + heartbeats.
+- `lib/broadcast/getBroadcastContext.ts` — the one `db.select().innerJoin(...)`
+  query (rundown + project + `project_css`) shared by both layouts; there are
+  no `relations()` definitions in this schema, so `db.query.*` was never an
+  option here.
 - `/preview/[rundownId]` and `/air/[rundownId]` rendering the **set** via
   `useTitleStream` → `TitleRenderer`, ordered by `(layer, position)` with
-  `z-index: layer`. No Redux on these pages.
+  `z-index: layer`, resolved through the title registry by `packageLabel`
+  (threaded down via `PackageLabelContext`). No Redux on these pages.
+- **`app/(admin)/` / `app/(broadcast)/` route-group split (Task 1, not in the
+  original bullet list above):** `app/(admin)/layout.tsx` unconditionally wraps
+  every route in MUI's `CssBaseline`, which paints a non-transparent theme
+  background onto `<body>` — fatal for a page OBS keys as transparent. Moving
+  `/admin`, `/login`, and `/dev/title-preview` into `app/(admin)/` and giving
+  `/preview`+`/air` their own root layout under `app/(broadcast)/` (transparent
+  `<body>`, no MUI, no Redux `Provider`) was required before `/air` could work
+  at all. URLs are unchanged.
 
 **Test:** bus unit tests (publish → subscriber receives; snapshot accumulates;
 channels and rundowns isolated; `command` doesn't mutate the set); stream route
@@ -195,10 +208,16 @@ replays the snapshot **before** live events; an integration check that a
 published `show` renders the title on `/air`.
 **Depends on:** P0, P3.
 
-> Implement the exact signatures already specified with tests in
+> Implemented the exact signatures already specified with tests in
 > `docs/superpowers/plans/2026-06-21-multi-layer-preview-air.md` (Tasks 3–6) —
 > `applyEvent`, `sortLiveSet`, `getSnapshot`, `BroadcastEvent` — rather than
-> inventing parallel helpers.
+> inventing parallel helpers. `rundown_items.layer` (the DB column),
+> `computeTake`, `/take`, the preview-toggle/hide-air routes, the controller UI,
+> and delivering `command` events to a mounted title's `onCommand` are all
+> deliberately deferred to **P5b**, via that same plan's Tasks 1, 2, 7–10, 10b,
+> 12–13.
+
+**Plan:** `docs/superpowers/plans/2026-08-13-p4-broadcast-bus.md` (executed).
 
 ### P5a — Admin workspace: projects, rundowns, items
 **Delivers:** an operator can create a project, build a rundown, and edit item data.
@@ -251,7 +270,7 @@ MIDI Remote** plan (the existing one is stale — see its banner). Plans are wri
 **one at a time**: write P<n> → execute → write P<n+1>, so each plan reflects what
 the previous one actually produced.
 
-- **Build order:** ~~P0 → P1 → P2 → P3~~ (done) → **P4** → P5a → P5b → P6 → P7 →
+- **Build order:** ~~P0 → P1 → P2 → P3 → P4~~ (done) → **P5a** → P5b → P6 → P7 →
   MIDI feature.
 - **Remaining migrations:** exactly two more are expected —
   `rundown_items.layer` (multi-layer plan, Task 1) and the 3 MIDI collaboration

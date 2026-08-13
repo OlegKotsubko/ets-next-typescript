@@ -23,9 +23,9 @@ vi.mock('@/lib/auth-client', () => ({
   signIn: { email: (...args: unknown[]) => signInEmail(...args) },
 }))
 
-import LoginPage from '@/app/login/page'
-import LoginForm from '@/app/login/LoginForm'
-import { loginSchema } from '@/app/login/schema'
+import LoginPage from '@/app/(admin)/login/page'
+import LoginForm from '@/app/(admin)/login/LoginForm'
+import { loginSchema } from '@/app/(admin)/login/schema'
 
 beforeEach(() => {
   vi.clearAllMocks()

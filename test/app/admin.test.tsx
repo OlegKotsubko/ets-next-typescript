@@ -24,8 +24,8 @@ vi.mock('next/navigation', () => ({
 const signOut = vi.fn().mockResolvedValue(undefined)
 vi.mock('@/lib/auth-client', () => ({ signOut: () => signOut() }))
 
-import AdminPage from '@/app/admin/page'
-import SignOutButton from '@/app/admin/SignOutButton'
+import AdminPage from '@/app/(admin)/admin/page'
+import SignOutButton from '@/app/(admin)/admin/SignOutButton'
 
 beforeEach(() => {
   vi.clearAllMocks()
