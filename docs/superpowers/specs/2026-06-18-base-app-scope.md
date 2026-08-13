@@ -15,8 +15,8 @@ This document only sequences it.
 | P0 scaffold | ✅ done | Next **16** (not 15 — `proxy.ts` needs it), React 19, TS, Vitest, ESLint flat config, RTK store, MUI theme, SCSS |
 | P1 database | ✅ done | `db/schema.ts` + migrations `0000`, `0001`, `0002` |
 | P2 auth | ✅ done | `lib/auth.ts`, `/login`, `/admin`, `proxy.ts` guard, `scripts/create-user.ts` |
-| P3 titles | ⬜ **next** | — |
-| P4 bus + SSE | ⬜ | — |
+| P3 titles | ✅ done | shared `models/`, three-file title contract, build-time codegen registries (titles + packages), `default` package with two titles, `assets:sync`, `app/dev/title-preview` |
+| P4 bus + SSE | ⬜ **next** | — |
 | P5a admin shell | ⬜ | — |
 | P5b controller | ⬜ | already planned (14 tasks) |
 | P6 data CRUD · P7 deploy | ⬜ | — |
@@ -129,31 +129,50 @@ below can be built, tested, and committed before the next begins.
 
 **Plan:** `docs/superpowers/plans/2026-07-03-p2-auth.md` (executed).
 
-### P3 — Title system (three-file contract + shared models) ⬜
-**Delivers:** the overlay-package + title contract and a working example title.
-- **`models/<TitleType>.ts`** — the shared, reusable contract layer from the
-  title-contract spec: exported Zod fields **and** the title's declared
-  **command actions** (e.g. `OpeningTimerFields` + `OpeningTimerActions =
-  ['start','stop','reset']`).
+### P3 — Title system (three-file contract + shared models) ✅ done
+**Delivered:** the overlay-package + title contract and a working example package.
+- **`models/<TitleType>.ts`** — the shared, reusable contract layer: exported Zod
+  fields **and** the title's declared **command actions** (`OpeningTimerFields` +
+  `OpeningTimerActions = ['start','stop','reset']`; `LowerThirdFields` +
+  `LowerThirdActions = []`).
 - Per-package three-file contract in `projects/<label>/titles/<key>/`:
   - `model.ts` — composes the shared model (`.omit()` / `.extend()`) so a project
     can skip or add fields; re-exports `actions`.
-  - `settings.ts` — presentation (`title_name`, stingers, `title_is_full_screen`,
-    …) **plus** `model` and `actions`, so reading it yields the full title entity.
+  - `settings.ts` — presentation **only** (`title_name`, stingers,
+    `title_is_full_screen`, …), validated by `titleSettingsSchema`.
   - `index.tsx` — renders from `data`.
-- `lib/titles/registry.ts` scanning `projects/*/titles/*` →
-  `{ Component, model, settings, actions }`; `getTitleModel(titleKey)`.
-- `project.config.ts` per package + the package scan (`packageExists`) that feeds
-  the Add Project dropdown.
-- One example package `projects/default/` with a `lower-third` styled in **SCSS**
-  consuming `project.css` CSS variables; `assets:sync` script
-  (`projects/*` → `public/projects/*`).
-- Dev-only `app/_dev/title-preview/page.tsx`.
+- **Contract reconciliation (deviation from the design sketch):** `settings.ts`
+  does not also carry `model`/`actions` — the **registry entry** is what composes
+  the full title entity (`{ Component, model, actions, settings }`). See
+  [titles-system.md](../../titles-system.md#contract-reconciliation-what-the-registry-actually-composes).
+- `lib/titles/registry.ts` — accessors (`getTitleEntry`, `getTitleModel`,
+  `getTitleActions`, `isDeclaredAction`, `listTitles`) over a **build-time
+  codegen** registry (`lib/titles/generated.ts`, emitted by
+  `scripts/generate-title-registry.ts`), not a runtime glob/scan — neither
+  `import.meta.glob` nor `require.context` works under both Turbopack and
+  Vitest.
+- `project.config.ts` per package + a **build-time codegen package registry**
+  (`lib/projects/generated.ts`, `packages:generate`) feeding the Add Project
+  dropdown — a runtime dynamic `import()` was invisible to Next's output file
+  tracing and silently dropped packages from the deployed Netlify function.
+  `packageExists`/`listOverlayPackageLabels` stay a plain (cheap) filesystem
+  scan and guard `label` against path traversal.
+- One example package `projects/default/` with `lower-third` and `opening-timer`
+  styled in **SCSS** consuming `project.css` CSS variables; `assets:sync` script
+  (`projects/*` → `public/projects/*`, Node built-ins only — no `fs-extra`/
+  `chokidar`).
+- Dev-only preview page at **`app/dev/title-preview`** (not `app/_dev/…` as
+  originally sketched — Next's `_`-prefixed private-folder convention excludes
+  the whole subtree from routing, so that path could never resolve as a URL;
+  a `NODE_ENV` guard keeps the same dev-only intent instead).
 
-**Test:** registry resolves the example title and exposes its `actions`; a
-composed `model.ts` parses valid data and rejects invalid; `assets:sync` copies
-into `public/projects/*`.
+**Test:** registry resolves both example titles and exposes their `actions`; a
+composed `model.ts` parses valid data and rejects invalid; the codegen scanners
+skip an incomplete title/package folder; `assets:sync` copies into
+`public/projects/*` and skips a package with no `assets`/`styles`.
 **Depends on:** P0.
+
+**Plan:** `docs/superpowers/plans/2026-08-10-p3-title-system.md` (executed).
 
 ### P4 — Broadcast bus + SSE + preview/air
 **Delivers:** publishing an event visibly shows/hides layered titles on `/air`,
@@ -232,7 +251,7 @@ MIDI Remote** plan (the existing one is stale — see its banner). Plans are wri
 **one at a time**: write P<n> → execute → write P<n+1>, so each plan reflects what
 the previous one actually produced.
 
-- **Build order:** ~~P0 → P1 → P2~~ (done) → **P3** → P4 → P5a → P5b → P6 → P7 →
+- **Build order:** ~~P0 → P1 → P2 → P3~~ (done) → **P4** → P5a → P5b → P6 → P7 →
   MIDI feature.
 - **Remaining migrations:** exactly two more are expected —
   `rundown_items.layer` (multi-layer plan, Task 1) and the 3 MIDI collaboration

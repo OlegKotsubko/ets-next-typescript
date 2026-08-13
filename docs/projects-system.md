@@ -102,36 +102,57 @@ Submitting POSTs to `/api/projects` and inserts one row (see [database.md](./dat
 
 ## Populating the `project_label` dropdown (the package scan)
 
-The dropdown and server-side validation share one helper that scans `projects/` — there is **no `projects:sync` script and no per-folder DB row** anymore.
+There is **no `projects:sync` script and no per-folder DB row** — a folder is a package iff it holds `project.config.ts`. `packageExists()` and `listOverlayPackageLabels()` do a plain filesystem scan (cheap, always fresh), but **listing full package configs is build-time codegen**, for the same reason titles are ([titles-system.md](./titles-system.md#how-titles-are-discovered)): a dynamic `import()` — even guarded with `webpackIgnore`/`turbopackIgnore` — is invisible to Next's build-time output file tracing, so `project.config.ts` files silently went missing from the deployed Netlify function and the dropdown returned `[]` in production. Emitting plain static imports fixes it.
 
 ```ts
-// lib/projects/packages.ts
+// lib/projects/packages.ts (shipped)
 import { readdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { generatedPackages } from './generated';
 
-const PROJECTS_DIR = join(process.cwd(), 'projects');
+export const PROJECTS_DIR = join(process.cwd(), 'projects');
+const CONFIG_FILE = 'project.config.ts';
 
-export function listOverlayPackages() {
-  return readdirSync(PROJECTS_DIR, { withFileTypes: true })
-    .filter(d => d.isDirectory() && existsSync(join(PROJECTS_DIR, d.name, 'project.config.ts')))
-    .map(async d => (await import(join(PROJECTS_DIR, d.name, 'project.config.ts'))).default);
+// label comes from user input (POST /api/projects) — must not resolve outside PROJECTS_DIR.
+function resolveWithin(root: string, label: string) {
+  const base = resolve(root);
+  const target = resolve(base, label);
+  return target === base || target.startsWith(`${base}/`) ? target : null;
 }
 
-export function packageExists(label: string) {
-  return existsSync(join(PROJECTS_DIR, label, 'project.config.ts'));
+export function packageExists(label: string, root: string = PROJECTS_DIR) {
+  const dir = resolveWithin(root, label);
+  return dir !== null && existsSync(join(dir, CONFIG_FILE));
+}
+
+export function listOverlayPackageLabels(root: string = PROJECTS_DIR) {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true })
+    .filter(d => d.isDirectory() && existsSync(join(root, d.name, CONFIG_FILE)))
+    .map(d => d.name)
+    .sort();
+}
+
+// Static registry, not a runtime import — see lib/projects/registry-codegen.ts.
+export async function listOverlayPackages() {
+  return generatedPackages;
 }
 ```
 
-The `POST /api/projects` handler calls `packageExists(body.label)` and rejects with `400` if the folder is missing — the project's `label` can never dangle. Because packages are file-system only, **removing a folder** orphans any project pointing at it; guard deletions accordingly (a package in use by a project shouldn't be deleted lightly).
+`scripts/generate-package-registry.ts` (wired into `predev`/`prebuild` as `packages:generate`) calls `listOverlayPackageLabels()` and writes `lib/projects/generated.ts` — one static `import Config from '@/projects/<label>/project.config'` per package, each parsed against `overlayPackageConfigSchema`. **Adding a package requires re-running `packages:generate`** (restarting `npm run dev` does this for you).
+
+The `POST /api/projects` handler calls `packageExists(body.label)` and rejects with `400` if the folder is missing — the project's `label` can never dangle. `packageExists` guards `label` against path traversal (`resolveWithin`) before touching the filesystem, since it runs on attacker-controllable input. Because packages are file-system only, **removing a folder** orphans any project pointing at it; guard deletions accordingly (a package in use by a project shouldn't be deleted lightly).
 
 ```json
-// package.json — sync is gone; only the asset pipeline remains
+// package.json — sync is gone; predev/prebuild chain both codegen steps and the asset sync
 {
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run titles:generate && npm run packages:generate && npm run assets:sync",
     "build": "next build",
-    "predev": "npm run dev:assets",
-    "prebuild": "npm run assets:sync",
+    "prebuild": "npm run titles:generate && npm run packages:generate && npm run assets:sync",
+    "titles:generate": "tsx scripts/generate-title-registry.ts",
+    "packages:generate": "tsx scripts/generate-package-registry.ts",
     "assets:sync": "tsx scripts/sync-project-assets.ts",
     "dev:assets": "tsx scripts/sync-project-assets.ts --watch"
   }
@@ -144,35 +165,54 @@ Next.js only serves static files from `public/`. To serve fonts, logos, and vide
 
 ### How it works
 
-- `scripts/sync-project-assets.ts` copies `projects/<slug>/assets/` → `public/projects/<slug>/assets/` and `projects/<slug>/styles/` → `public/projects/<slug>/styles/`.
-- Runs as `prebuild` (Netlify build) and via a `chokidar` watcher in dev (`npm run dev:assets`, started automatically by `predev`).
+Uses Node built-ins only (`cpSync`, `fs.watch`) — no `fs-extra`, no `chokidar` — two fewer dependencies for ~15 lines of code.
+
+- `lib/projects/assets.ts` holds the testable logic: `syncProjectAssets({ src, dst })` copies each package's `assets/` and `styles/` subfolders (via `listOverlayPackageLabels`) and returns the `"<label>/<subdir>"` pairs it copied; a package with neither subfolder is skipped without error.
+- `scripts/sync-project-assets.ts` is the thin IO shell the npm scripts call.
+- `assets:sync` (one-shot) is chained into **both** `predev` and `prebuild`, alongside `titles:generate` and `packages:generate` — a fresh checkout always has `public/projects/` populated before `next dev`/`next build` runs.
+- `dev:assets` (`--watch`) is a **separate, manual** command — `predev` does **not** start it automatically. Run `npm run dev:assets` in its own terminal alongside `npm run dev` if you want font/CSS/video edits picked up live; otherwise re-run `npm run assets:sync` (or restart the dev server) after editing `projects/*/assets/` or `projects/*/styles/`.
 - `public/projects/` is **git-ignored** — it's a derived artifact.
 
 ### The script
 
 ```ts
-// scripts/sync-project-assets.ts
+// lib/projects/assets.ts (shipped)
+import { cpSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { readdirSync, statSync } from 'node:fs';
-import { copy } from 'fs-extra';
-import chokidar from 'chokidar';
+import { listOverlayPackageLabels } from './packages';
 
-const SRC = join(process.cwd(), 'projects');
-const DST = join(process.cwd(), 'public', 'projects');
+const SYNCED_SUBDIRS = ['assets', 'styles'];
 
-const watch = process.argv.includes('--watch');
+export function syncProjectAssets({ src, dst }: { src: string; dst: string }): string[] {
+  return listOverlayPackageLabels(src).flatMap((label) =>
+    SYNCED_SUBDIRS.filter((sub) => existsSync(join(src, label, sub))).map((sub) => {
+      cpSync(join(src, label, sub), join(dst, label, sub), { recursive: true, force: true });
+      return `${label}/${sub}`;
+    }),
+  );
+}
+```
 
-async function copyAll() {
-  for (const slug of readdirSync(SRC)) {
-    if (!statSync(join(SRC, slug)).isDirectory()) continue;
-    await copy(join(SRC, slug, 'assets'), join(DST, slug, 'assets'), { overwrite: true });
-    await copy(join(SRC, slug, 'styles'), join(DST, slug, 'styles'), { overwrite: true });
-  }
+```ts
+// scripts/sync-project-assets.ts (shipped)
+import { join } from 'node:path';
+import { watch } from 'node:fs';
+import { syncProjectAssets } from '../lib/projects/assets';
+
+const src = join(process.cwd(), 'projects');
+const dst = join(process.cwd(), 'public', 'projects');
+
+function run() {
+  const copied = syncProjectAssets({ src, dst });
+  console.log(`Synced ${copied.length} folder(s) -> public/projects/`);
 }
 
-await copyAll();
-if (watch) {
-  chokidar.watch([`${SRC}/*/assets/**`, `${SRC}/*/styles/**`]).on('change', copyAll);
+run();
+
+if (process.argv.includes('--watch')) {
+  // Recursive watch is supported on macOS and Windows (the dev platforms);
+  // CI/Netlify only ever runs the one-shot prebuild path.
+  watch(src, { recursive: true }, () => run());
   console.log('Watching project assets…');
 }
 ```
@@ -299,6 +339,6 @@ The same pattern is used for `/air/[rundownId]/layout.tsx`. **The asset path use
 ## Common pitfalls
 
 - **Label mismatch.** `project.config.ts` `label` must equal the folder name; otherwise `packageExists()` won't match it and projects can't select the package.
-- **Forgetting to run the watcher.** If you edit a font file in `projects/atl/assets/fonts/` and don't have `dev:assets` running, the browser won't see the change. `npm run dev` starts the watcher automatically.
+- **Forgetting to run the watcher.** `npm run dev` runs `assets:sync` once via `predev`, but does **not** start the `dev:assets` watcher. If you edit a font file in `projects/atl/assets/fonts/` mid-session, the browser won't see the change until you re-run `npm run assets:sync` or start `npm run dev:assets` yourself in a separate terminal.
 - **Editing files in `public/projects/`.** This folder is overwritten on every sync. Always edit the source in `projects/<slug>/...`.
 - **Loading `project.css` with `font-display: swap`.** Acceptable in admin; **never** in `/preview` or `/air` — broadcast frames will paint with a fallback font for a few hundred milliseconds.
