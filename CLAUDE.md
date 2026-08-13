@@ -45,7 +45,7 @@ These are the patterns that span multiple files. Internalize them before writing
 
 4. **Title data is JSONB, validated at the API boundary — never its own table.** `rundown_items.data jsonb` holds each title instance's config, parsed against the title's `model.ts` before insert. Adding/editing a title needs **no migration**. Adding a CRUD entity or column **does**. The action→command table is in `docs/database.md`.
 
-5. **SSE over an in-process event bus, not WebSockets, not the DB.** Clicking AIR publishes a `show`/`hide`/`update` event to an in-memory pub/sub keyed by `rundownId` (`lib/broadcast/bus.ts`); on-air state is transient and never persisted. SSE endpoints stream it to `/preview` and `/air`. The bus is single-instance only — see the caveat below. Contract in `docs/preview-air.md`, `docs/rundowns.md`.
+5. **SSE over an in-process event bus, not WebSockets, not the DB.** Clicking AIR publishes a `show`/`hide`/`update`/`command` event to an in-memory pub/sub keyed by `(rundownId, channel)` (`lib/broadcast/bus.ts`, channel is `preview`|`air`); on-air state is transient and never persisted. The bus also keeps a stateful snapshot per `(rundownId, channel)` so a reconnecting SSE client replays the current live set as `show` events before live ones. SSE endpoints stream it to `/preview` and `/air`. **`show`/`update` events carry `layer` and `position`** — that's where they live today; `rundown_items` has no `layer` column yet (it's a pending P5b migration), so a title's layer/position exist only in the event payload and the in-memory live set, never in the database. The bus is single-instance only — see the caveat below. Contract in `docs/preview-air.md`, `docs/rundowns.md`.
 
 6. **Edge runtime *only* for SSE streaming routes** (`export const runtime = 'edge'`). Everything else runs on Node so the Neon driver, better-auth, and fs access work normally. Netlify Functions cap at 10s; SSE streams are long-lived, so they must be Edge. See `docs/deployment.md`.
 
@@ -55,8 +55,9 @@ These are the patterns that span multiple files. Internalize them before writing
 
 - `/login` (public) — only public admin page.
 - `/admin` (gallery + **Add Project**), `/admin/[projectId]/{data,overlays,overlays/[rundownId]}` (protected via `proxy.ts` — Next 16's rename of `middleware.ts` — gating `/admin/*` and `/api/projects/*`). Workspace nav is two links: **Data** and **Overlays** (Overlays = the rundown/controller system; underlying tables keep the `rundowns`/`rundown_items` names).
-- `/preview/[rundownId]`, `/air/[rundownId]` (**public** — OBS/vMix browser sources; rundown IDs are unguessable UUIDs, treated as share-link tokens, not secrets). These pages do **not** use Redux — everything flows through the SSE `data` prop.
-- `/api/projects` (`POST` create / `GET` list) · `/api/projects/[projectId]/...` (protected REST) · `/api/broadcast/[rundownId]/stream?channel=preview|air` (public SSE, Edge).
+- `/preview/[rundownId]`, `/air/[rundownId]` (**public** — OBS/vMix browser sources; rundown IDs are unguessable UUIDs, treated as share-link tokens, not secrets). These pages do **not** use Redux — everything flows through the SSE-driven `useTitleStream` hook, never a `data` prop.
+- `/api/projects` (`POST` create / `GET` list) · `/api/projects/[projectId]/...` (protected REST) · `GET /api/broadcast/[rundownId]/stream?channel=preview|air` (public SSE, Edge).
+- **Route groups (URLs unchanged):** `/admin`, `/login`, `/dev/title-preview` live under `app/(admin)/`, which owns the MUI `AppRouterCacheProvider`/`ThemeProvider`/`CssBaseline` and the Redux `Provider`. `/preview`, `/air` live under `app/(broadcast)/`, with its own root layout (transparent `<body>`, no MUI, no Redux) — required because OBS needs a genuinely transparent canvas and `CssBaseline` paints a non-transparent background onto `<body>`.
 
 ## State management
 
