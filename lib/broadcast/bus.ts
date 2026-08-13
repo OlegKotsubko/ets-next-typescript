@@ -5,7 +5,7 @@ import { applyEvent, sortLiveSet, type BroadcastEvent, type LiveTitle } from './
 
 export type { BroadcastEvent } from './liveSet'
 
-type Channel = 'preview' | 'air'
+export type Channel = 'preview' | 'air'
 type Key = `${string}:${Channel}`
 
 const key = (rundownId: string, channel: Channel): Key => `${rundownId}:${channel}`
@@ -16,7 +16,16 @@ const snapshots = new Map<Key, Map<string, LiveTitle>>()
 export function publish(rundownId: string, channel: Channel, event: BroadcastEvent): void {
   const k = key(rundownId, channel)
   snapshots.set(k, applyEvent(snapshots.get(k) ?? new Map(), event))
-  subscribers.get(k)?.forEach((fn) => fn(event))
+  // Isolate each subscriber: one throwing callback (e.g. a route enqueueing
+  // onto a closed/errored controller) must not stop delivery to the rest of
+  // the subscribers, nor crash the publisher.
+  subscribers.get(k)?.forEach((fn) => {
+    try {
+      fn(event)
+    } catch {
+      // Swallow — a single bad subscriber shouldn't break the others.
+    }
+  })
 }
 
 export function subscribe(rundownId: string, channel: Channel, fn: (event: BroadcastEvent) => void): () => void {
@@ -24,7 +33,13 @@ export function subscribe(rundownId: string, channel: Channel, fn: (event: Broad
   const set = subscribers.get(k) ?? new Set()
   set.add(fn)
   subscribers.set(k, set)
-  return () => set.delete(fn)
+  // Prune the (rundownId, channel) entry once its last subscriber leaves —
+  // rundownId is arbitrary, unauthenticated input, so unbounded map growth
+  // is a real concern otherwise.
+  return () => {
+    set.delete(fn)
+    if (set.size === 0) subscribers.delete(k)
+  }
 }
 
 export function getSnapshot(rundownId: string, channel: Channel): LiveTitle[] {

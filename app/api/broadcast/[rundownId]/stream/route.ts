@@ -2,11 +2,9 @@
 // Public, unauthenticated (rundown IDs are unguessable UUIDs — treated as
 // share links, per docs/rundowns.md). Edge runtime is mandatory: Netlify
 // Functions cap at 10s and this stream is long-lived. CLAUDE.md decision 6.
-import { subscribe, getSnapshot, type BroadcastEvent } from '@/lib/broadcast/bus'
+import { subscribe, getSnapshot, type BroadcastEvent, type Channel } from '@/lib/broadcast/bus'
 
 export const runtime = 'edge'
-
-type Channel = 'preview' | 'air'
 
 function resolveChannel(url: string): Channel {
   return new URL(url).searchParams.get('channel') === 'air' ? 'air' : 'preview'
@@ -33,12 +31,29 @@ export async function GET(req: Request, { params }: { params: Promise<{ rundownI
         controller.enqueue(enc.encode(frame(event)))
       })
       // Keeps the Netlify CDN / corporate proxies from closing an idle connection.
-      beat = setInterval(() => controller.enqueue(enc.encode(': beat\n\n')), 15000)
+      beat = setInterval(() => {
+        try {
+          controller.enqueue(enc.encode(': beat\n\n'))
+        } catch {
+          // Controller is closed/errored (client gone) but cancel() didn't
+          // fire yet on this path — stop the interval ourselves so it can't
+          // leak and keep firing against a dead controller forever.
+          if (beat) clearInterval(beat)
+        }
+      }, 15000)
     },
     cancel() {
       if (beat) clearInterval(beat)
       unsub?.()
     },
+  })
+
+  // Second safety net alongside cancel(): not every disconnect path is
+  // guaranteed to invoke the stream's cancel() callback. clearInterval and
+  // unsub() are both safe no-ops if cancel() already ran.
+  req.signal.addEventListener('abort', () => {
+    if (beat) clearInterval(beat)
+    unsub?.()
   })
 
   return new Response(stream, {
