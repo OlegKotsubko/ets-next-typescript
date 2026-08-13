@@ -20,14 +20,15 @@ describe('TitleRenderer', () => {
     expect(screen.getByText('Kickoff')).toBeInTheDocument()
   })
 
-  it('gives a full-screen title the fixed-inset class and stacks by layer via zIndex', () => {
+  it('gives a full-screen title real fixed/inset positioning and stacks by layer via zIndex', () => {
     const { container } = render(<TitleRenderer titles={[lowerThird, openingTimer]}
       packageLabel="default" />)
     const wrappers = container.querySelectorAll(':scope > div')
-    expect(wrappers[0]).toHaveStyle({ zIndex: '3' })
-    expect(wrappers[0]).not.toHaveClass('fixed')
-    expect(wrappers[1]).toHaveStyle({ zIndex: '0' })
-    expect(wrappers[1]).toHaveClass('fixed', 'inset-0')
+    // lower-third: title_is_full_screen is false — positioned, but not fixed/inset.
+    expect(wrappers[0]).toHaveStyle({ zIndex: '3', position: 'relative' })
+    // opening-timer: title_is_full_screen is true — real fixed/inset styles,
+    // not an inert Tailwind-style class name (this project has no Tailwind).
+    expect(wrappers[1]).toHaveStyle({ zIndex: '0', position: 'fixed', inset: '0px' })
   })
 
   it('silently skips an unknown titleKey instead of crashing', () => {
