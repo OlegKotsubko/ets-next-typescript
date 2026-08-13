@@ -18,7 +18,7 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 | Title styling | `sass` (SCSS) | `^1.80.0` |
 | State / data | `@reduxjs/toolkit`, `react-redux` | `^2.3.0`, `^9.1.0` |
 | Netlify adapter | `@netlify/plugin-nextjs` | `^5.0.0` |
-| Asset sync | `tsx`, `fs-extra`, `chokidar` (dev only) | latest |
+| Asset sync / codegen | `tsx` (dev only — Node built-ins do the copying and watching, no `fs-extra`/`chokidar`) | latest |
 
 ## Why each piece
 
@@ -62,5 +62,5 @@ npm install --save-dev drizzle-kit
 npm install @mui/material @emotion/react @emotion/styled
 npm install --save-dev sass
 npm install @reduxjs/toolkit react-redux
-npm install --save-dev @netlify/plugin-nextjs tsx fs-extra chokidar
+npm install --save-dev @netlify/plugin-nextjs tsx
 ```

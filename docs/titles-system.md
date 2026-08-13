@@ -44,6 +44,45 @@ export const meta = {
 
 > The operator-facing display name now lives in `settings.ts` as `title_name` (see below), not in `model.ts`. If you keep a `meta` export for description text, that's fine, but `title_name` is the canonical label shown in the Overlays picker.
 
+### Shared models library (`models/`)
+
+Reusable field/action contracts don't live duplicated inside each package — they live once, top-level, in `models/<TitleType>.ts`. A shared model exports the Zod fields **and** the title's declared **command actions**: the buttons a thread widget can send, and the allow-list the `/command` route validates against. Universal actions (`air`, `preview`, `hide`, `update`) are implicit for every title and are **never** listed here.
+
+```ts
+// models/OpeningTimer.ts
+import { z } from 'zod';
+
+export const OpeningTimerFields = z.object({
+  hours: z.number().int().min(0).max(99),
+  minutes: z.number().int().min(0).max(59),
+  seconds: z.number().int().min(0).max(59),
+  main_text: z.string().max(80),
+  sponsors: z.array(z.string()).default([]),
+});
+
+export const OpeningTimerActions = ['start', 'stop', 'reset'] as const;
+
+export type OpeningTimerData = z.infer<typeof OpeningTimerFields>;
+```
+
+A package's `model.ts` **composes** the shared contract with `.omit()`/`.extend()` — so a project can drop or add fields without forking the shared definition — then re-exports `actions` unchanged (or narrowed):
+
+```ts
+// projects/TCG/titles/opening-timer/model.ts
+import { z } from 'zod';
+import { OpeningTimerFields, OpeningTimerActions } from '@/models/OpeningTimer';
+
+// This package drops sponsors and adds a subtitle.
+export const model = OpeningTimerFields.omit({ sponsors: true }).extend({
+  subtitle: z.string().max(60).optional(),
+});
+
+export const actions = OpeningTimerActions;
+export type Data = z.infer<typeof model>;
+```
+
+A package can also use a shared model unchanged (`export const model = LowerThirdFields`), and a title with nothing to start or stop — a lower-third — still exports `actions`, just as `[] as const`.
+
 ### `index.tsx` — the React component
 
 ```tsx
@@ -143,6 +182,10 @@ These folders are copied to `public/projects/<label>/assets/titles/...` by the a
 
 **How the broadcast pages use it** (see [preview-air.md](./preview-air.md#applying-overlay-settings)): on AIR the renderer plays `title_stinger_in`, shows the overlay over its `title_background` / `title_video` bed, and plays `title_stinger_out` on HIDE. When `title_is_full_screen` is true the overlay occupies the whole 1920×1080 canvas as a splash before/around the content. `title_color` is a UI affordance only (it tags the overlay in the operator's picker and list); it does **not** restyle the rendered graphic — brand colors still come from `project.css` variables.
 
+### Contract reconciliation: what the registry actually composes
+
+`settings.ts` default-exports **presentation only** — it does not also carry `model`/`actions`, despite what an earlier sketch of this doc showed. The full title entity, `{ Component, model, actions, settings }`, is composed by the **registry** ([below](#how-titles-are-discovered)), not read from any single file. Presentation stays a plain object validatable by one Zod schema (`titleSettingsSchema`), and consumers go through `getTitleEntry()`/`getTitleModel()`/`getTitleActions()` rather than importing a title's `model.ts` or `settings.ts` directly.
+
 ## Styling rules
 
 1. **SCSS modules only.** MUI is not available inside title components. Each title imports its own `*.module.scss` sibling; there is no Tailwind in this repo.
@@ -155,33 +198,45 @@ See [projects-system.md](./projects-system.md#font-pipeline) for the font and CS
 
 ## How titles are discovered
 
-A startup scan walks `projects/<slug>/titles/*` and builds a per-project registry:
+Discovery is **build-time codegen, not a runtime scan**. Neither Vite's `import.meta.glob` (Vite-only) nor webpack's `require.context` (webpack-only) works under **both** Turbopack (`next dev` / `next build`) and Vitest, so a plain Node script walks the filesystem once and emits static imports instead:
+
+```
+scripts/generate-title-registry.ts     # thin IO shell — writes the file
+  → lib/titles/codegen.ts              # scanTitleDirs() + buildRegistrySource() — the testable logic
+  → lib/titles/generated.ts            # AUTO-GENERATED — one static import per title; do not edit
+  → lib/titles/registry.ts             # runtime accessors, indexed by (packageLabel, titleKey)
+```
+
+`scanTitleDirs()` walks `projects/*/titles/*` and **skips any folder missing one of the three required files** (`index.tsx`, `model.ts`, `settings.ts`) — a half-written title is silently excluded from the build rather than crashing it. `npm run titles:generate` runs automatically via `predev`/`prebuild` ([projects-system.md](./projects-system.md#static-asset-pipeline)); **adding, renaming, or removing a title requires re-running it** (restarting `npm run dev` does this for you, since it runs `predev` first).
 
 ```ts
-// lib/titles/registry.ts (sketch)
-import { z } from 'zod';
-
+// lib/titles/types.ts (shipped)
 export type TitleEntry = {
-  key: string;                        // folder name (e.g., 'lower-third')
-  packageLabel: string;               // overlay-package folder it belongs to
-  Component: React.ComponentType<{ data: unknown }>;
-  model: z.ZodTypeAny;
-  settings: TitleSettings;            // from settings.ts — preview, stingers, color, bg/video, full-screen
-};
+  key: string                                    // folder name (e.g., 'lower-third')
+  packageLabel: string                           // overlay-package folder it belongs to
+  Component: ComponentType<TitleProps<never>>
+  model: z.ZodTypeAny
+  actions: readonly string[]                     // from the composed model.ts
+  settings: TitleSettings                        // from settings.ts, Zod-validated at codegen time
+}
+```
 
-// Built at module load via glob imports — wired through Vite's `import.meta.glob`
-// or a Next.js `webpack` config that scans `projects/*/titles/*/{index.tsx,model.ts,settings.ts}`.
+```ts
+// lib/titles/registry.ts (shipped) — accessors built once from generated.ts
+export function getTitleEntry(packageLabel: string, titleKey: string): TitleEntry | undefined
+export function getTitleModel(packageLabel: string, titleKey: string)
+export function getTitleActions(packageLabel: string, titleKey: string): readonly string[]
+export function isDeclaredAction(packageLabel: string, titleKey: string, action: string): boolean
+export function listTitles(packageLabel: string): TitleEntry[]   // sorted by title_name
 ```
 
 The registry is consulted in three places:
 
 | Caller | Use |
 |---|---|
-| Admin "Add to rundown" modal (Screenshot 5) | List available titles for the current project. |
-| API mutation handler | Look up the title's `model` to validate `data` before writing. |
-| Broadcast page (`/preview`, `/air`) | Look up the title's `Component` and render with the SSE payload. |
-
-The exact implementation (glob plugin vs. generated index) is an implementation detail — what matters is the contract: **a title is its folder, its `index.tsx`, and its `model.ts`**.
+| Admin "Add to rundown" modal (Screenshot 5) | `listTitles()` — available titles for the current package. |
+| API mutation handler | `getTitleModel()` to validate `data` before writing; `isDeclaredAction()` to 400 an unknown `/command` action ([database.md](./database.md)). |
+| Broadcast page (`/preview`, `/air`) | `getTitleEntry(...).Component` — render with the SSE payload. |
 
 ## Adding a new title
 
@@ -189,8 +244,9 @@ The exact implementation (glob plugin vs. generated index) is an implementation 
 # 1. Create the folder
 mkdir -p projects/TCG/titles/sponsor-bug
 
-# 2. Write the model (operator-editable fields)
-$EDITOR projects/TCG/titles/sponsor-bug/model.ts
+# 2. Write (or reuse) the shared model, then compose it
+$EDITOR models/SponsorBug.ts                        # if this is a new title type
+$EDITOR projects/TCG/titles/sponsor-bug/model.ts     # composes via .omit()/.extend(), re-exports actions
 
 # 3. Write the component
 $EDITOR projects/TCG/titles/sponsor-bug/index.tsx
@@ -198,7 +254,8 @@ $EDITOR projects/TCG/titles/sponsor-bug/index.tsx
 # 4. Write the settings (preview, stingers, color, bg/video, full-screen)
 $EDITOR projects/TCG/titles/sponsor-bug/settings.ts
 
-# 5. Restart the dev server (or HMR will pick it up if the registry uses glob imports)
+# 5. Regenerate the registry (npm run dev / npm run build do this automatically via predev/prebuild)
+npm run titles:generate
 ```
 
 **No database migration is needed.** Title data lives in `rundown_items.data jsonb`, validated against `model.ts` at the API boundary. See [database.md](./database.md#migrations-vs-project-creation-vs-overlay-packages).
