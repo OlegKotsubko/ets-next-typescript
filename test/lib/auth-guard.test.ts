@@ -3,16 +3,16 @@ import { describe, it, expect } from 'vitest'
 import { guardRequest } from '@/lib/auth-guard'
 
 describe('guardRequest', () => {
-  it('redirects logged-out page requests under /admin to login', () => {
-    expect(guardRequest('/admin', false)).toBe('redirect-login')
-    expect(guardRequest('/admin/some-project/data', false)).toBe('redirect-login')
+  it('redirects logged-out page requests under /projects to login', () => {
+    expect(guardRequest('/projects', false)).toBe('redirect-login')
+    expect(guardRequest('/projects/some-project/data', false)).toBe('redirect-login')
   })
   it('401s logged-out API requests under /api/projects', () => {
     expect(guardRequest('/api/projects', false)).toBe('unauthorized')
     expect(guardRequest('/api/projects/abc/players', false)).toBe('unauthorized')
   })
   it('allows protected paths when the session cookie is present', () => {
-    expect(guardRequest('/admin', true)).toBe('allow')
+    expect(guardRequest('/projects', true)).toBe('allow')
     expect(guardRequest('/api/projects/abc', true)).toBe('allow')
   })
   it('never touches public paths', () => {
@@ -21,6 +21,6 @@ describe('guardRequest', () => {
     }
   })
   it('does not treat prefix look-alikes as protected', () => {
-    expect(guardRequest('/administrator', false)).toBe('allow')
+    expect(guardRequest('/projectsx', false)).toBe('allow')
   })
 })

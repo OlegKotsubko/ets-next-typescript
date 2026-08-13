@@ -156,7 +156,7 @@ export default function RundownsPage({ params }: { params: Promise<{ projectId: 
                 <MoreVertIcon fontSize="small" />
               </IconButton>
               <CardActionArea component={Link}
-                href={`/admin/${projectId}/rundowns/${r.id}`}>
+                href={`/projects/${projectId}/rundowns/${r.id}`}>
                 <CardContent>
                   <Typography variant="h6">
                     {r.name}

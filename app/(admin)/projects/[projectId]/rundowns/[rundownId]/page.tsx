@@ -58,7 +58,7 @@ export default function RundownStubPage({
     setDeleteError(null)
     try {
       await deleteRundown({ projectId, id: rundownId }).unwrap()
-      router.push(`/admin/${projectId}/rundowns`)
+      router.push(`/projects/${projectId}/rundowns`)
     } catch (err) {
       setDeleteError(getErrorMessage(err, 'Failed to delete rundown. Please try again.'))
     }
@@ -66,7 +66,7 @@ export default function RundownStubPage({
 
   return (
     <Box sx={{ p: 4 }}>
-      <Link href={`/admin/${projectId}/rundowns`}>
+      <Link href={`/projects/${projectId}/rundowns`}>
         ← Back to Rundowns
       </Link>
 

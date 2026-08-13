@@ -8,7 +8,7 @@ import { projects } from '@/db/schema'
 import WorkspaceNav from './WorkspaceNav'
 
 // proxy.ts only checks cookie presence; this is the authoritative check,
-// covering every page under /admin/[projectId]/* (data/*, rundowns/*).
+// covering every page under /projects/[projectId]/* (data/*, rundowns/*).
 export default async function ProjectWorkspaceLayout({
   children, params,
 }: { children: React.ReactNode; params: Promise<{ projectId: string }> }) {

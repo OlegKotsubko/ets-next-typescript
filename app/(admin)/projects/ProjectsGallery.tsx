@@ -32,7 +32,7 @@ function getErrorMessage(err: unknown): string {
   return 'Failed to create project. Please try again.'
 }
 
-export default function AdminGallery({ userEmail }: { userEmail: string }) {
+export default function ProjectsGallery({ userEmail }: { userEmail: string }) {
   const { data: projects = [], isError: projectsError } = useListProjectsQuery()
   const { data: packages = [], isError: packagesError } = useListOverlayPackagesQuery()
   const [createProject, { isLoading }] = useCreateProjectMutation()
@@ -119,7 +119,7 @@ No projects yet — click Add Project to create one.
             size={{ xs: 12, sm: 6, md: 4 }}>
             <Card>
               <CardActionArea component={Link}
-                href={`/admin/${p.id}/data`}>
+                href={`/projects/${p.id}/data`}>
                 <CardContent>
                   <Typography variant="h6">
                     {p.name}

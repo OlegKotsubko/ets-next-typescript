@@ -43,7 +43,7 @@ Generate
         {brackets.map((b) => (
           <ListItemButton key={b.id}
             component={Link}
-            href={`/admin/${projectId}/data/brackets/${b.id}`}>
+            href={`/projects/${projectId}/data/brackets/${b.id}`}>
             {b.name}
             {' '}
 (
