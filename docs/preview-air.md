@@ -162,6 +162,21 @@ The route sends a comment line every 15 seconds to keep intermediaries (Netlify 
 
 The client ignores comment lines automatically (`EventSource` never fires `onmessage` for them).
 
+### Caveat: the bus does not (yet) cross the Edge/Node runtime split
+
+**This is a real, deterministic limitation of the current code — distinct from, and stronger than, the [single-server pub/sub caveat](./rundowns.md#caveat-single-server-pubsub) documented in `docs/rundowns.md`.** Read this before wiring a Node-side publisher (P5b's AIR/TAKE routes).
+
+`app/api/broadcast/[rundownId]/stream/route.ts` sets `export const runtime = 'edge'` (mandatory — see above). Next.js compiles Edge routes into a separate bundle/isolate from Node route handlers. Every other route under `/api/projects/` is a Node route (it needs `auth` + `db`, which don't run on Edge), and P5b's future AIR/TAKE routes will be Node routes for the same reason.
+
+`lib/broadcast/bus.ts` holds its subscriber/snapshot state at module scope. When one module is loaded into two separate runtime bundles, each bundle gets **its own copy of that module-level state** — a Node-side `publish()` call and the Edge-side `subscribe()`/`getSnapshot()` calls are talking to two different in-memory maps that never see each other. This is nothing to do with the multi-region scaling scenario the single-server caveat describes; it's guaranteed to happen on a single instance, in one deployment, in one region — the moment a publisher lives in a Node route and a subscriber lives in an Edge route. On Netlify this is made worse still, since separate Edge Function invocations may each get a fresh isolate with no shared state at all, even invocation-to-invocation.
+
+**Current state (this branch):** nothing publishes yet, so nothing is broken today — this is a forward-looking caveat, not a live bug.
+
+**This needs to be resolved before or during P5b**, when a Node-side `publish()` call is introduced. Plausible options, to be decided when that plan is written (not decided here):
+- Keep the publisher on Edge too (e.g. an Edge-runtime AIR/TAKE route that talks to `db`/`auth` via an HTTP-friendly path instead of the Node-only driver paths).
+- Drop `runtime = 'edge'` from the SSE route and rely on `EventSource`'s automatic reconnect to paper over Netlify's 10s Node Function cap (reconnect churn instead of a hard 10s wall).
+- Introduce a real cross-instance broker (Redis pub/sub, Postgres `LISTEN/NOTIFY`) that both runtimes talk to instead of sharing in-process state.
+
 ### Preview vs. Air channels
 
 The bus is channel-aware: `publish`, `subscribe`, and `getSnapshot` (`lib/broadcast/bus.ts`) all take `(rundownId, channel, …)`, and the snapshot map is keyed per `${rundownId}:${channel}` — `preview` and `air` never share state, even for the same rundown. The intended controller behavior (built in P5b, not yet shipped) is:
@@ -298,7 +313,8 @@ If you want a teammate to view your local rundown, use `ngrok http 3000` or Clou
 
 - **`/air/<id>` shows "Rundown not found".** `getBroadcastContext` returned `null` — the rundown ID doesn't exist, or its `project_id` doesn't join to a `projects` row.
 - **A title doesn't appear at all.** `getTitleEntry(packageLabel, titleKey)` returned `undefined` — check the `titleKey` published in the event matches an entry under the rundown's `packageLabel` in `lib/titles/generated.ts`. `TitleRenderer` skips it silently rather than throwing.
-- **SSE connects but no events arrive.** The admin and the broadcast page are on different Edge regions, so the in-process pub/sub doesn't reach across. See the [single-server caveat](./rundowns.md#caveat-single-server-pubsub).
+- **SSE connects but no events arrive, and it happens every time (not intermittently).** As of P5b (once a Node-side AIR/TAKE route calls `publish()`), this is the expected, deterministic result of the Edge/Node runtime split — the Node publisher and the Edge SSE route hold two separate copies of the bus's in-memory state and never see each other's events. See [the Edge/Node runtime-split caveat](#caveat-the-bus-does-not-yet-cross-the-edgenode-runtime-split) above; this is the primary cause once a Node-side publisher exists, and it is not fixed by picking a region.
+- **SSE connects but no events arrive, and it's intermittent / only some sessions are affected.** The admin and the broadcast page are on different Edge regions, so the in-process pub/sub doesn't reach across. See the [single-server caveat](./rundowns.md#caveat-single-server-pubsub). (This is the pre-P5b failure mode, when everything publishing is still Edge-side.)
 - **OBS shows a flash of system font before the real font.** `project.css` is using `font-display: swap` instead of `block`. See [projects-system.md](./projects-system.md#font-pipeline).
 - **Title is positioned wrong.** Titles assume a 1920×1080 canvas. If the OBS Browser Source is set to a different size, fixed positions will be off.
 - **Connection drops every 30 seconds.** Heartbeats aren't being sent. Check the SSE route's `setInterval` (it should emit `: beat\n\n` every 15s).

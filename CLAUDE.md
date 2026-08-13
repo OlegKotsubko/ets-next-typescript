@@ -73,6 +73,8 @@ RTK Query = all server cache (one API slice per entity: `playersApi`, `teamsApi`
 
 The broadcast bus lives in process memory. It works because the operator's admin tab and the OBS source hit the same Netlify Edge region for a given rundown. Scaling to multiple instances would require a cross-instance broker (Redis pub/sub, Postgres `LISTEN/NOTIFY`). Out of MVP scope but document if you touch the bus.
 
+**Stronger, always-on variant once a Node-side publisher exists:** this is separate from the multi-region scaling edge case above. The SSE route is Edge-only (`runtime = 'edge'`), while P5b's AIR/TAKE routes will be Node (they need `auth`/`db`). Edge and Node compile to separate bundles, so the bus's module-level state isn't actually shared between a Node `publish()` and the Edge `subscribe()`/`getSnapshot()` — this fails 100% of the time once that Node publisher exists, not just across regions. See `docs/preview-air.md`'s "Caveat: the bus does not (yet) cross the Edge/Node runtime split" for the full explanation and options; resolve before/during P5b.
+
 ## Out of MVP scope
 
 MIDI control surfaces, Bluetooth presenter remotes, scheduled/timed transitions, transition animations, multi-channel rundowns (one on-air title per rundown at a time). See `docs/roadmap.md`.
