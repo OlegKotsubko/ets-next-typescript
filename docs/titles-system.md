@@ -217,7 +217,7 @@ Migration strategy:
 Until the rundown editor wraps everything, you can mount a title against a hand-rolled payload:
 
 ```tsx
-// app/_dev/title-preview/page.tsx (DEV ONLY)
+// app/dev/title-preview/page.tsx (DEV ONLY)
 import LowerThird from '@/projects/atl/titles/lower-third';
 
 export default function Preview() {
@@ -230,7 +230,10 @@ export default function Preview() {
 }
 ```
 
-Visit `http://localhost:3000/_dev/title-preview` to iterate visually. Delete the page before shipping.
+Visit `http://localhost:3000/dev/title-preview` to iterate visually. The page 404s in
+production via a `NODE_ENV` guard — it lives under `app/dev/` rather than `app/_dev/`
+because Next's private-folder convention (`_`-prefixed folders) excludes the whole
+subtree from routing, so an underscore-prefixed page can never resolve as a URL.
 
 ## Anti-patterns
 

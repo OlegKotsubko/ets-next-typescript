@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import TitlePreviewPage, { SAMPLE_DATA } from '@/app/_dev/title-preview/page'
+import TitlePreviewPage, { SAMPLE_DATA } from '@/app/dev/title-preview/page'
 
 describe('TitlePreviewPage', () => {
   it('renders a section per registered title', () => {

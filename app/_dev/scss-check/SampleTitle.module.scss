@@ -1,6 +1,0 @@
-.bar {
-  // consumes a brand CSS variable (project.css supplies it later); falls back here
-  color: var(--brand-fg, #fff);
-  font-display: block;
-  padding: 8px 16px;
-}
