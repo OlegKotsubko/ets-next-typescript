@@ -9,7 +9,7 @@ ETS produces broadcast graphics (lower-thirds, scoreboards, player cards, sponso
 ```
                             ┌────────────────────────┐
                             │  Admin (Next.js page)  │  ←─ operator UI (MUI, RTK Query)
-                            │       /admin/...        │
+                            │      /projects/...       │
                             └───────────┬────────────┘
                                         │ fetch + mutate
                             ┌───────────▼────────────┐
@@ -45,11 +45,11 @@ ETS produces broadcast graphics (lower-thirds, scoreboards, player cards, sponso
 | Route | Auth | Purpose |
 |---|---|---|
 | `/login` | public | Email + password sign-in (Zod-validated). See [auth.md](./auth.md). |
-| `/admin` | protected | Project gallery + **Add Project** (creates a `projects` row; picks an overlay package via `project_label`). |
-| `/admin/[projectId]` | protected | Project hub. Two workspace links: **Data** and **Overlays**. |
-| `/admin/[projectId]/data` | protected | CRUD for Players, Talents, Teams, Sponsors, Assets, Videos, Brackets, Project CSS. See [data-entities.md](./data-entities.md). |
-| `/admin/[projectId]/overlays` | protected | List overlays (rundowns) and create new ones. |
-| `/admin/[projectId]/overlays/[rundownId]` | protected | Overlay editor — add overlays, configure, drive AIR/HIDE. See [rundowns.md](./rundowns.md). |
+| `/projects` | protected | Project gallery + **Add Project** (creates a `projects` row; picks an overlay package via `project_label`). |
+| `/projects/[projectId]` | protected | Project hub. Two workspace links: **Data** and **Overlays**. |
+| `/projects/[projectId]/data` | protected | CRUD for Players, Talents, Teams, Sponsors, Assets, Videos, Brackets, Project CSS. See [data-entities.md](./data-entities.md). |
+| `/projects/[projectId]/overlays` | protected | List overlays (rundowns) and create new ones. |
+| `/projects/[projectId]/overlays/[rundownId]` | protected | Overlay editor — add overlays, configure, drive AIR/HIDE. See [rundowns.md](./rundowns.md). |
 | `/preview/[rundownId]` | public | Operator preview channel. See [preview-air.md](./preview-air.md). |
 | `/air/[rundownId]` | public | On-air channel — OBS/vMix browser source. |
 | `/api/projects` | protected | `POST` creates a project; `GET` lists them. |

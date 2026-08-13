@@ -3,7 +3,7 @@
 There are **two distinct things** here, and keeping them apart is the whole point of this doc:
 
 - **An overlay package** is a folder under `projects/`. It's **file-system first**: a developer ships a package by adding a folder. The folder holds everything static — its identity, its overlay components, its CSS, its bundled fonts, logos, and the videos/backgrounds its overlays use. A package is a reusable template.
-- **A project** is a **broadcast event** the operator creates from the `/admin` gallery (**Add Project**). It lives in the database (`projects` row, UUID id) and **selects one overlay package** via `project_label`. Many projects can reuse the same package (e.g. two `TCG` events on different dates). The database also holds the project's mutable data (players, teams, talents, sponsors, brackets, overlays) keyed by `project_id`.
+- **A project** is a **broadcast event** the operator creates from the `/projects` gallery (**Add Project**). It lives in the database (`projects` row, UUID id) and **selects one overlay package** via `project_label`. Many projects can reuse the same package (e.g. two `TCG` events on different dates). The database also holds the project's mutable data (players, teams, talents, sponsors, brackets, overlays) keyed by `project_id`.
 
 So the old "a folder *is* a project" model is gone: folders are packages, projects are instances that point at a package. (Overlay components were formerly called "titles"; see [titles-system.md](./titles-system.md).)
 
@@ -86,7 +86,7 @@ npm run dev
 
 ## Creating a project (operator)
 
-From the `/admin` gallery, **Add Project** opens a dialog with five fields:
+From the `/projects` gallery, **Add Project** opens a dialog with five fields:
 
 | Field | Maps to | Control |
 |---|---|---|

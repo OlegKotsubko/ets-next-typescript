@@ -26,7 +26,7 @@ The full schema lives in `db/schema.ts`. Tables fall into three groups.
 
 ### `projects` (one row per broadcast event, created from the admin UI)
 
-A project is a **broadcast event** created by the operator from the `/admin` gallery via **Add Project**. It is **not** a file-system folder. Each project selects one *overlay package* — a folder under `projects/` — through `project_label`. Many projects may reuse the same package (e.g. two `TCG` events on different dates). See [projects-system.md](./projects-system.md).
+A project is a **broadcast event** created by the operator from the `/projects` gallery via **Add Project**. It is **not** a file-system folder. Each project selects one *overlay package* — a folder under `projects/` — through `project_label`. Many projects may reuse the same package (e.g. two `TCG` events on different dates). See [projects-system.md](./projects-system.md).
 
 ```ts
 export const projectMode = pgEnum('project_mode', ['team_vs_team', 'player_vs_player']);
@@ -144,7 +144,7 @@ Three distinct operations. Conflating them is the most common source of confusio
 |---|---|---|---|
 | Affects | Schema (DDL) | One `projects` row (DML insert) | The file system only |
 | When | Schema changes | Operator starts a new event | Developer ships new overlays/CSS |
-| Run by | Developer / CI | Operator, from `/admin` | Developer, by adding `projects/<label>/` |
+| Run by | Developer / CI | Operator, from `/projects` | Developer, by adding `projects/<label>/` |
 | DB change | Yes (tracked migration) | One insert via the API | None (discovered by directory scan) |
 
 > The old `projects:sync` script (folder → `projects` row) is **gone**. Projects are now created in the UI; overlay-package folders are discovered by scanning `projects/` at request time. See [projects-system.md](./projects-system.md).

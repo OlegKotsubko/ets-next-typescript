@@ -82,7 +82,7 @@ export const loginSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>
 ```
 
-`app/login/page.tsx` wires that schema into `useForm({ resolver: zodResolver(loginSchema) })`, renders MUI `TextField`s with `helperText={errors.<field>?.message}`, and submits through `signIn.email(values)`. A returned `result.error` is surfaced in an `Alert`; success calls `router.push('/admin')` then `router.refresh()`.
+`app/login/page.tsx` wires that schema into `useForm({ resolver: zodResolver(loginSchema) })`, renders MUI `TextField`s with `helperText={errors.<field>?.message}`, and submits through `signIn.email(values)`. A returned `result.error` is surfaced in an `Alert`; success calls `router.push('/projects')` then `router.refresh()`.
 
 The layout matches **Screenshot 1**: centered card on a dark background, weplay studios logo, Email + Password fields, full-width "Sign in" button.
 
@@ -94,7 +94,7 @@ The decision logic is factored into a pure, unit-testable helper:
 
 ```ts
 // lib/auth-guard.ts
-const PROTECTED_PREFIXES = ['/admin', '/api/projects']
+const PROTECTED_PREFIXES = ['/projects', '/api/projects']
 
 export type GuardDecision = 'allow' | 'redirect-login' | 'unauthorized'
 
@@ -130,7 +130,7 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/projects/:path*'],
+  matcher: ['/projects/:path*', '/api/projects/:path*'],
 }
 ```
 
@@ -138,19 +138,19 @@ Note the asymmetry: **API paths get `401`, pages get a redirect.** A fetch shoul
 
 > **The cookie check is optimistic** — it proves a cookie is *present*, not that it's *valid*. Every protected page and route handler must additionally call `auth.api.getSession`.
 
-> **`/preview/*` and `/air/*` are intentionally public.** Anyone with the URL can render the graphics (OBS does not authenticate). Treat rundown IDs as unguessable tokens (UUIDs) rather than secrets. The matcher deliberately covers only `/admin/*` and `/api/projects/*` — `/api/auth/*` and `/api/broadcast/*` must stay open.
+> **`/preview/*` and `/air/*` are intentionally public.** Anyone with the URL can render the graphics (OBS does not authenticate). Treat rundown IDs as unguessable tokens (UUIDs) rather than secrets. The matcher deliberately covers only `/projects/*` and `/api/projects/*` — `/api/auth/*` and `/api/broadcast/*` must stay open.
 
 ## Reading the session in server code
 
 This is the authoritative check, and the pattern every protected page repeats:
 
 ```tsx
-// app/admin/page.tsx
+// app/(admin)/projects/page.tsx
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 
-export default async function AdminPage() {
+export default async function ProjectsPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
   // ... render, using session.user.email / session.user.id
@@ -162,7 +162,7 @@ In Route Handlers, read the session the same way and return `401` if missing.
 ## Logout
 
 ```tsx
-// app/admin/SignOutButton.tsx
+// app/(admin)/projects/SignOutButton.tsx
 'use client'
 
 import { Button } from '@mui/material'
@@ -231,7 +231,7 @@ The session returned by `auth.api.getSession` contains `user.id`, `user.email`, 
 
 ## Troubleshooting
 
-- **Login succeeds in the network tab but `/admin` redirects back to `/login`** — `BETTER_AUTH_URL` doesn't match the origin. Cookies are dropped because the cookie domain doesn't match.
+- **Login succeeds in the network tab but `/projects` redirects back to `/login`** — `BETTER_AUTH_URL` doesn't match the origin. Cookies are dropped because the cookie domain doesn't match.
 - **`BETTER_AUTH_SECRET` errors in production but works locally** — the env var didn't propagate to the Netlify context. Verify it's set for **Production** (not just **Deploy Previews**) in Netlify's environment-variables UI.
 - **Sign-up returns 4xx / `SIGNUP_DISABLED`** — working as designed (`disableSignUp`). Use `scripts/create-user.ts`.
 - **`proxy.ts` never runs** — you're on Next 15.x, which silently ignores it. The app requires `next@^16`.

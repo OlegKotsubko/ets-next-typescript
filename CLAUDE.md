@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What ETS is
 
-A Next.js app that serves broadcast graphics (lower-thirds, scoreboards, player cards, sponsor bugs) to OBS/vMix via browser sources. An operator drives a live show from an admin UI (`/admin`); the `/preview` and `/air` pages render the same React title components, fed by Server-Sent Events.
+A Next.js app that serves broadcast graphics (lower-thirds, scoreboards, player cards, sponsor bugs) to OBS/vMix via browser sources. An operator drives a live show from an admin UI (`/projects`); the `/preview` and `/air` pages render the same React title components, fed by Server-Sent Events.
 
 ## Commands (as specified in docs — wire these into `package.json` when scaffolding)
 
@@ -54,10 +54,10 @@ These are the patterns that span multiple files. Internalize them before writing
 ## Route map
 
 - `/login` (public) — only public admin page.
-- `/admin` (gallery + **Add Project**), `/admin/[projectId]/{data,overlays,overlays/[rundownId]}` (protected via `proxy.ts` — Next 16's rename of `middleware.ts` — gating `/admin/*` and `/api/projects/*`). Workspace nav is two links: **Data** and **Overlays** (Overlays = the rundown/controller system; underlying tables keep the `rundowns`/`rundown_items` names).
+- `/projects` (gallery + **Add Project**), `/projects/[projectId]/{data,overlays,overlays/[rundownId]}` (protected via `proxy.ts` — Next 16's rename of `middleware.ts` — gating `/projects/*` and `/api/projects/*`). Workspace nav is two links: **Data** and **Overlays** (Overlays = the rundown/controller system; underlying tables keep the `rundowns`/`rundown_items` names).
 - `/preview/[rundownId]`, `/air/[rundownId]` (**public** — OBS/vMix browser sources; rundown IDs are unguessable UUIDs, treated as share-link tokens, not secrets). These pages do **not** use Redux — everything flows through the SSE-driven `useTitleStream` hook, never a `data` prop.
 - `/api/projects` (`POST` create / `GET` list) · `/api/projects/[projectId]/...` (protected REST) · `GET /api/broadcast/[rundownId]/stream?channel=preview|air` (public SSE, Edge).
-- **Route groups (URLs unchanged):** `/admin`, `/login`, `/dev/title-preview` live under `app/(admin)/`, which owns the MUI `AppRouterCacheProvider`/`ThemeProvider`/`CssBaseline` and the Redux `Provider`. `/preview`, `/air` live under `app/(broadcast)/`, with its own root layout (transparent `<body>`, no MUI, no Redux) — required because OBS needs a genuinely transparent canvas and `CssBaseline` paints a non-transparent background onto `<body>`.
+- **Route groups (URLs unchanged):** `/projects`, `/login`, `/dev/title-preview` live under `app/(admin)/`, which owns the MUI `AppRouterCacheProvider`/`ThemeProvider`/`CssBaseline` and the Redux `Provider`. `/preview`, `/air` live under `app/(broadcast)/`, with its own root layout (transparent `<body>`, no MUI, no Redux) — required because OBS needs a genuinely transparent canvas and `CssBaseline` paints a non-transparent background onto `<body>`.
 
 ## State management
 
