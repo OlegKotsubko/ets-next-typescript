@@ -6,10 +6,19 @@ import { applyEvent, sortLiveSet, type LiveTitle, type BroadcastEvent } from './
 export function useTitleStream(rundownId: string, channel: 'preview' | 'air'): LiveTitle[] {
   const [titles, setTitles] = useState<LiveTitle[]>([])
   const mapRef = useRef<Map<string, LiveTitle>>(new Map())
+  const key = `${rundownId}:${channel}`
+  const [seenKey, setSeenKey] = useState(key)
 
-  useEffect(() => {
+  // Adjusting state during render when rundownId/channel changes — React's
+  // documented alternative to a syncing effect, which would cascade an extra render.
+  if (seenKey !== key) {
+    setSeenKey(key)
+    // eslint-disable-next-line react-hooks/refs
     mapRef.current = new Map()
     setTitles([])
+  }
+
+  useEffect(() => {
     const es = new EventSource(`/api/broadcast/${rundownId}/stream?channel=${channel}`)
     es.onmessage = (e) => {
       const event = JSON.parse(e.data) as BroadcastEvent
