@@ -14,7 +14,7 @@ This document only sequences it.
 |---|---|---|
 | P0 scaffold | ✅ done | Next **16** (not 15 — `proxy.ts` needs it), React 19, TS, Vitest, ESLint flat config, RTK store, MUI theme, SCSS |
 | P1 database | ✅ done | `db/schema.ts` + migrations `0000`, `0001`, `0002` |
-| P2 auth | ✅ done | `lib/auth.ts`, `/login`, `/admin`, `proxy.ts` guard, `scripts/create-user.ts` |
+| P2 auth | ✅ done | `lib/auth.ts`, `/login`, `/projects`, `proxy.ts` guard, `scripts/create-user.ts` |
 | P3 titles | ✅ done | shared `models/`, three-file title contract, build-time codegen registries (titles + packages), `default` package with two titles, `assets:sync`, `app/dev/title-preview` |
 | P4 bus + SSE | ✅ done | `lib/broadcast/{liveSet,bus}.ts`, Edge SSE route with snapshot replay, `app/(broadcast)/{preview,air}/[rundownId]`, `app/(admin)`/`app/(broadcast)` route-group split |
 | P5a admin shell | ⬜ **next** | — |
@@ -24,18 +24,18 @@ This document only sequences it.
 Branch `p2-auth`; 40 tests passing; `npm run build` clean. **Everything from P3
 down is unbuilt.**
 
-P2's plan had stalled after Task 4 (no `/login`, no `/admin`, no
+P2's plan had stalled after Task 4 (no `/login`, no `/projects`, no
 `scripts/create-user.ts`). Tasks 5–9 were executed on 2026-08-10 and the loop is
 now verified end to end against the dev Neon branch:
 
 | Check | Result |
 |---|---|
-| `/admin` logged out | `307` → `/login` |
+| `/projects` logged out | `307` → `/login` |
 | `GET /api/projects/x` logged out | `401 {"error":"Unauthorized"}` |
 | `POST /api/auth/sign-up/email` | `400` — `disableSignUp` holds |
 | `/login` | `200` (public) |
-| sign in → `/admin` | `200`, renders the operator email + Sign out |
-| sign out → `/admin` | `307` → `/login` |
+| sign in → `/projects` | `200`, renders the operator email + Sign out |
+| sign out → `/projects` | `307` → `/login` |
 | `next build` | `ƒ Proxy (Middleware)` registered — confirms `proxy.ts` on Next 16 |
 
 > ## Revision note (2026-06-21, amended 2026-08-10)
@@ -45,7 +45,7 @@ now verified end to end against the dev Neon branch:
 > end state**, with one nuance the shipped code makes concrete:
 >
 > 1. **Multi-project is the target, per `CLAUDE.md` and `docs/projects-system.md`.**
->    Projects are UUID rows created from the `/admin` gallery via **Add Project**,
+>    Projects are UUID rows created from the `/projects` gallery via **Add Project**,
 >    each selecting an overlay package by `project_label`.
 >    **However:** P1 shipped `0001_seed_singleton_project.sql`, which inserts one
 >    row (`00000000-…-0001`, label `default`) idempotently. That row **stays** — it
@@ -111,7 +111,7 @@ below can be built, tested, and committed before the next begins.
 - `lib/auth.ts` (better-auth + Drizzle adapter, `usePlural: true`,
   `disableSignUp: !allowSignUp` via the `buildAuthOptions()` factory),
   `lib/auth-client.ts`, `app/api/auth/[...all]/route.ts`, `lib/auth-guard.ts`.
-- `/login` (RHF + `zodResolver` + MUI), protected `/admin` placeholder with
+- `/login` (RHF + `zodResolver` + MUI), protected `/projects` placeholder with
   `SignOutButton`, `scripts/create-user.ts`, guarded e2e round-trip test.
 - Guard is **`proxy.ts`**, not `middleware.ts` — Next 15.5 renamed it and it only
   registers on Next 16. Pure decision logic is factored into
@@ -122,7 +122,7 @@ below can be built, tested, and committed before the next begins.
   Only `scripts/create-user.ts` — via its own `allowSignUp: true` instance — can
   create users.
 - Route guard is **`proxy.ts`**, not `middleware.ts` — Next 15.5 renamed it, and
-  it only registers on Next 16. It gates `/admin/*` and `/api/projects/*` via an
+  it only registers on Next 16. It gates `/projects/*` and `/api/projects/*` via an
   optimistic session-cookie check. `CLAUDE.md`'s route map still says
   `middleware.ts` and needs updating.
 - `requireSession()` — the helper every protected route handler calls.
@@ -197,7 +197,7 @@ and reloading the window restores them.
   original bullet list above):** `app/(admin)/layout.tsx` unconditionally wraps
   every route in MUI's `CssBaseline`, which paints a non-transparent theme
   background onto `<body>` — fatal for a page OBS keys as transparent. Moving
-  `/admin`, `/login`, and `/dev/title-preview` into `app/(admin)/` and giving
+  `/projects`, `/login`, and `/dev/title-preview` into `app/(admin)/` and giving
   `/preview`+`/air` their own root layout under `app/(broadcast)/` (transparent
   `<body>`, no MUI, no Redux `Provider`) was required before `/air` could work
   at all. URLs are unchanged.
@@ -223,13 +223,13 @@ published `show` renders the title on `/air`.
 **Delivers:** an operator can create a project, build a rundown, and edit item data.
 **This is where multi-project actually arrives** — the schema already supports it,
 so no migration is needed; what's missing is the UI and the route.
-- `/admin` **gallery** listing every `projects` row (the seeded `default` row
+- `/projects` **gallery** listing every `projects` row (the seeded `default` row
   shows up as just another card) + **Add Project** (`POST /api/projects`,
   validating `createProjectSchema`), with the `project_label` dropdown fed by the
   package scan; reject a label with no matching folder (`400`).
 - Audit that nothing hardcodes the seeded UUID: `grep -rn "00000000-0000" app lib`
   must return nothing.
-- Workspace `/admin/[projectId]` with nav **Data** / **Overlays**; Overlays =
+- Workspace `/projects/[projectId]` with nav **Data** / **Overlays**; Overlays =
   rundown list + rundown CRUD (`/api/projects/[projectId]/rundowns`), each
   rundown setting `owner_id = me`.
 - Rundown-item CRUD: the **Add Template** modal (widget name, **Layer** 0–10,

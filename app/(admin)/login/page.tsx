@@ -6,7 +6,7 @@ import LoginForm from './LoginForm'
 // Already-authenticated visitors shouldn't see the login form again.
 export default async function LoginPage() {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (session) redirect('/admin')
+  if (session) redirect('/projects')
 
   return <LoginForm />
 }

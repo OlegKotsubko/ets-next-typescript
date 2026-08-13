@@ -24,7 +24,7 @@ export default function LoginForm() {
       setFormError(result.error.message ?? 'Sign-in failed')
       return
     }
-    router.push('/admin')
+    router.push('/projects')
     router.refresh()
   }
 

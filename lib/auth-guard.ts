@@ -1,4 +1,4 @@
-const PROTECTED_PREFIXES = ['/admin', '/api/projects']
+const PROTECTED_PREFIXES = ['/projects', '/api/projects']
 
 export type GuardDecision = 'allow' | 'redirect-login' | 'unauthorized'
 

@@ -59,18 +59,18 @@ See [titles-system.md](./titles-system.md) for the title registry.
 
 ## Creating a rundown
 
-From `/admin/[projectId]/overlays` (Screenshot 4):
+From `/projects/[projectId]/overlays` (Screenshot 4):
 
 1. Operator clicks **ADD NEW RUNDOWN**.
 2. A modal asks for a name (Screenshot 6's "Display name" field).
 3. POST to `/api/projects/[projectId]/rundowns` with `{ name }`.
-4. On success, the UI navigates to `/admin/[projectId]/overlays/[rundownId]`.
+4. On success, the UI navigates to `/projects/[projectId]/overlays/[rundownId]`.
 
 The template-selection modal (Screenshot 5) is the **Add Title** flow described next — there are no rundown-level templates in MVP.
 
 ## The rundown editor
 
-Visible at `/admin/[projectId]/overlays/[rundownId]`. Layout (matches Screenshots 8–12):
+Visible at `/projects/[projectId]/overlays/[rundownId]`. Layout (matches Screenshots 8–12):
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

@@ -381,7 +381,7 @@ Note the `and(eq(table.id, params.id), eq(table.projectId, params.projectId))` f
 
 ## Admin UI conventions
 
-Each entity gets a page under `/admin/[projectId]/data/<entity>`:
+Each entity gets a page under `/projects/[projectId]/data/<entity>`:
 
 - **List view** — MUI `DataGrid` with sortable columns and row-level edit/delete actions.
 - **Create / edit dialog** — MUI `Dialog` with form fields derived from the Zod schema.

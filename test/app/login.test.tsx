@@ -42,9 +42,9 @@ describe('loginSchema', () => {
 })
 
 describe('LoginPage', () => {
-  it('redirects to /admin when already signed in', async () => {
+  it('redirects to /projects when already signed in', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1', email: 'op@ets.tv' } })
-    await expect(LoginPage()).rejects.toThrow('NEXT_REDIRECT:/admin')
+    await expect(LoginPage()).rejects.toThrow('NEXT_REDIRECT:/projects')
   })
   it('renders the login form when there is no session', async () => {
     getSession.mockResolvedValue(null)
@@ -65,7 +65,7 @@ describe('LoginForm', () => {
     expect(signInEmail).not.toHaveBeenCalled()
   })
 
-  it('signs in and navigates to /admin on success', async () => {
+  it('signs in and navigates to /projects on success', async () => {
     signInEmail.mockResolvedValue({ data: {}, error: null })
     const user = userEvent.setup()
     render(<LoginForm />)
@@ -73,7 +73,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText(/password/i), 'longenough')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
     await waitFor(() => expect(signInEmail).toHaveBeenCalledWith({ email: 'op@ets.tv', password: 'longenough' }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin'))
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/projects'))
   })
 
   it('surfaces a server error from better-auth', async () => {

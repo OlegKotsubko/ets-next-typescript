@@ -22,7 +22,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Open <http://localhost:3000/login>. After signing in you'll land on the project gallery at `/admin`, where **Add Project** creates a broadcast event that selects one overlay package (a folder under `projects/`).
+Open <http://localhost:3000/login>. After signing in you'll land on the project gallery at `/projects`, where **Add Project** creates a broadcast event that selects one overlay package (a folder under `projects/`).
 
 To preview a rundown as OBS would see it, open `http://localhost:3000/air/<rundownId>` in a separate browser tab or as an OBS Browser Source (1920×1080, transparent background).
 

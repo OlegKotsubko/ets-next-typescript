@@ -5,7 +5,7 @@
 The MVP scope is everything described in the rest of the docs. Specifically:
 
 - **Authentication.** Email + password login via better-auth; no public sign-up. See [auth.md](./auth.md).
-- **Project gallery + Add Project.** `/admin` lists projects (DB rows) as a grid and has an **Add Project** button: a dialog with `project_name`, `project_mode` (`team_vs_team` / `player_vs_player`), `project_picture`, `project_label` (dropdown of overlay-package folders under `projects/`), `project_date`. See [projects-system.md](./projects-system.md#creating-a-project-operator).
+- **Project gallery + Add Project.** `/projects` lists projects (DB rows) as a grid and has an **Add Project** button: a dialog with `project_name`, `project_mode` (`team_vs_team` / `player_vs_player`), `project_picture`, `project_label` (dropdown of overlay-package folders under `projects/`), `project_date`. See [projects-system.md](./projects-system.md#creating-a-project-operator).
 - **Project workspace.** Two links: **Data** and **Overlays**. (MIDI/Bluetooth are no longer in the primary nav; still sketched below.)
 - **Data CRUD.** Project Assets, Players, Talents, Teams (with the `team_players` join + captain/stand-in flags), Sponsors, Project CSS, Project Videos, Tournament Brackets. Players/Talents/bracket matches carry an open `extra` string-map. See [data-entities.md](./data-entities.md).
 - **Brackets.** Single-elimination generated from a participant count (8 → 4 Quarterfinal + 2 Semifinal + 1 Final); matches pair teams or players per `project_mode`. Read-only in overlays.

@@ -5,8 +5,8 @@ import { Tabs, Tab, Box } from '@mui/material'
 
 export default function WorkspaceNav({ projectId }: { projectId: string }) {
   const pathname = usePathname()
-  const dataHref = `/admin/${projectId}/data`
-  const rundownsHref = `/admin/${projectId}/rundowns`
+  const dataHref = `/projects/${projectId}/data`
+  const rundownsHref = `/projects/${projectId}/rundowns`
 
   const value = pathname.startsWith(rundownsHref) ? rundownsHref : dataHref
 

@@ -26,7 +26,7 @@ Data
         {SECTIONS.map((s) => (
           <ListItemButton key={s.slug}
             component={Link}
-            href={`/admin/${projectId}/data/${s.slug}`}>
+            href={`/projects/${projectId}/data/${s.slug}`}>
             <ListItemText primary={s.label} />
           </ListItemButton>
         ))}

@@ -24,8 +24,8 @@ vi.mock('next/navigation', () => ({
 const signOut = vi.fn().mockResolvedValue(undefined)
 vi.mock('@/lib/auth-client', () => ({ signOut: () => signOut() }))
 
-import AdminPage from '@/app/(admin)/admin/page'
-import SignOutButton from '@/app/(admin)/admin/SignOutButton'
+import ProjectsPage from '@/app/(admin)/projects/page'
+import SignOutButton from '@/app/(admin)/projects/SignOutButton'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -44,14 +44,14 @@ function renderWithStore(ui: React.ReactElement) {
   </Provider>)
 }
 
-describe('AdminPage', () => {
+describe('ProjectsPage', () => {
   it('redirects to /login when there is no session', async () => {
     getSession.mockResolvedValue(null)
-    await expect(AdminPage()).rejects.toThrow('NEXT_REDIRECT:/login')
+    await expect(ProjectsPage()).rejects.toThrow('NEXT_REDIRECT:/login')
   })
   it('renders the signed-in operator email', async () => {
     getSession.mockResolvedValue({ user: { id: 'u1', email: 'op@ets.tv', name: 'op@ets.tv' } })
-    renderWithStore(await AdminPage())
+    renderWithStore(await ProjectsPage())
     expect(screen.getByText(/op@ets\.tv/)).toBeInTheDocument()
   })
 })
