@@ -1,17 +1,27 @@
 'use client'
-import { use, useState } from 'react'
+import { use, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  Box, Typography, CircularProgress, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Button,
+  Box, Typography, CircularProgress, IconButton, Stack, Button,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { useGetRundownQuery, useUpdateRundownMutation, useDeleteRundownMutation } from '@/store/apis/rundownsApi'
+import {
+  useListItemsQuery, useCreateItemMutation, useUpdateItemMutation,
+  useDeleteItemMutation, useReorderItemsMutation,
+} from '@/store/apis/rundownItemsApi'
+import { useListTitlesQuery } from '@/store/apis/titlesApi'
+import { AddTemplateModal } from '@/components/admin/rundown/AddTemplateModal'
+import { RundownItemRow } from '@/components/admin/rundown/RundownItemRow'
+import type { CreateRundownItemInput } from '@/db/schemas/rundown-items'
 import { getErrorMessage } from '@/lib/errors/getErrorMessage'
 
-export default function RundownStubPage({
+type FieldErrors = { fieldErrors?: Record<string, string[]> }
+
+export default function RundownPage({
   params,
 }: { params: Promise<{ projectId: string; rundownId: string }> }) {
   const { projectId, rundownId } = use(params)
@@ -19,6 +29,17 @@ export default function RundownStubPage({
   const { data: rundown, isLoading, isError } = useGetRundownQuery({ projectId, id: rundownId })
   const [updateRundown, { isLoading: isRenaming }] = useUpdateRundownMutation()
   const [deleteRundown, { isLoading: isDeleting }] = useDeleteRundownMutation()
+
+  const { data: items = [] } = useListItemsQuery({ projectId, rundownId })
+  const { data: titles = [] } = useListTitlesQuery({ projectId })
+  const [createItem] = useCreateItemMutation()
+  const [updateItem, { isLoading: isSaving }] = useUpdateItemMutation()
+  const [deleteItem] = useDeleteItemMutation()
+  const [reorderItems] = useReorderItemsMutation()
+
+  const optionByKey = useMemo(() => Object.fromEntries(titles.map((t) => [t.key, t])), [titles])
+
+  const [addOpen, setAddOpen] = useState(false)
 
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameName, setRenameName] = useState('')
@@ -54,13 +75,38 @@ export default function RundownStubPage({
     setDeleteError(null)
   }
 
-  async function handleDelete() {
+  async function handleDeleteRundown() {
     setDeleteError(null)
     try {
       await deleteRundown({ projectId, id: rundownId }).unwrap()
       router.push(`/projects/${projectId}/rundowns`)
     } catch (err) {
       setDeleteError(getErrorMessage(err, 'Failed to delete rundown. Please try again.'))
+    }
+  }
+
+  function handleCreate(payload: CreateRundownItemInput) {
+    return createItem({ projectId, rundownId, data: payload }).unwrap()
+  }
+
+  function move(index: number, dir: -1 | 1) {
+    const ids = items.map((it) => it.id)
+    const j = index + dir
+    if (j < 0 || j >= ids.length) return
+    const swapped = [...ids]
+    ;[swapped[index], swapped[j]] = [swapped[j], swapped[index]]
+    reorderItems({ projectId, rundownId, orderedIds: swapped })
+  }
+
+  async function saveItemData(itemId: string, values: Record<string, unknown>): Promise<FieldErrors | void> {
+    try {
+      await updateItem({ projectId, rundownId, itemId, data: { data: values } }).unwrap()
+    } catch (err) {
+      const data = (err as { data?: unknown })?.data
+      if (data && typeof data === 'object' && 'fieldErrors' in data) {
+        return { fieldErrors: (data as FieldErrors).fieldErrors }
+      }
+      return { fieldErrors: {} }
     }
   }
 
@@ -100,12 +146,42 @@ export default function RundownStubPage({
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Box>
-          <Typography color="text.secondary"
-            sx={{ mt: 1 }}>
-0 items
-          </Typography>
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+            <Typography color="text.secondary">
+              {items.length}
+              {items.length === 1 ? ' item' : ' items'}
+            </Typography>
+            <Button variant="contained"
+              onClick={() => setAddOpen(true)}>
+              Add Template
+            </Button>
+          </Box>
+
+          <Stack spacing={1}
+            sx={{ mt: 2 }}>
+            {items.map((item, i) => (
+              <RundownItemRow
+                key={item.id}
+                item={item}
+                option={optionByKey[item.titleKey]}
+                isFirst={i === 0}
+                isLast={i === items.length - 1}
+                onReorderUp={() => move(i, -1)}
+                onReorderDown={() => move(i, 1)}
+                onDelete={() => deleteItem({ projectId, rundownId, itemId: item.id })}
+                onSaveData={(values) => saveItemData(item.id, values)}
+                saving={isSaving}
+              />
+            ))}
+          </Stack>
         </Box>
       )}
+
+      <AddTemplateModal open={addOpen}
+        options={titles}
+        onClose={() => setAddOpen(false)}
+        onCreate={handleCreate} />
 
       <Dialog open={renameOpen}
         onClose={closeRenameDialog}
@@ -158,7 +234,7 @@ export default function RundownStubPage({
           </Button>
           <Button variant="contained"
             color="error"
-            onClick={handleDelete}
+            onClick={handleDeleteRundown}
             disabled={isDeleting}>
             Delete
           </Button>
