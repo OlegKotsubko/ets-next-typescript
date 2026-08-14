@@ -48,10 +48,24 @@ describe('POST items', () => {
     expect(res.status).toBe(400)
   })
 
-  it('400 when data fails the title model', async () => {
+  it('201 with an incomplete required field — create stores a draft (validated on save, not create)', async () => {
+    // Regression: the Add Template modal sends model defaults, and a required
+    // min(1) string defaults to ''. Create must NOT reject it — the operator
+    // fills it via the row's edit form, which validates on PATCH.
     getTitleModelMock.mockReturnValue(z.object({ playerName: z.string().min(1) }))
+    dbMock.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }),
+        }),
+      }),
+    })
+    const returning = vi.fn().mockResolvedValue([{ id: 'i1', position: 0 }])
+    const values = vi.fn().mockReturnValue({ returning })
+    dbMock.insert.mockReturnValue({ values })
     const res = await POST(req({ titleKey: 'lower-third', data: { playerName: '' } }), ctx())
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(201)
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ data: { playerName: '' }, position: 0 }))
   })
 
   it('201, position auto-appended, projectId+rundownId from URL', async () => {

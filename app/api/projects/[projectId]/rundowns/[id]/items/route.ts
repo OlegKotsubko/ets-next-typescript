@@ -28,11 +28,13 @@ export async function POST(req: Request, { params }: Ctx) {
   const parsed = createRundownItemSchema.safeParse(await req.json())
   if (!parsed.success) return Response.json(parsed.error.flatten(), { status: 400 })
 
+  // The title must exist, but we do NOT enforce the full model here: an item is
+  // created as a draft (from the Add Template modal) and its required fields are
+  // filled afterwards via the row's edit form, which validates against model.ts
+  // on save (PATCH). Full validation on create would reject a freshly-added item
+  // whose required fields (e.g. a min(1) string) aren't filled in yet.
   const model = getTitleModel(ctx.packageLabel, parsed.data.titleKey)
   if (!model) return Response.json({ error: 'unknown titleKey' }, { status: 400 })
-
-  const dataParsed = model.safeParse(parsed.data.data)
-  if (!dataParsed.success) return Response.json(dataParsed.error.flatten(), { status: 400 })
 
   const [last] = await db.select({ position: rundownItems.position }).from(rundownItems)
     .where(eq(rundownItems.rundownId, rundownId))
@@ -41,7 +43,7 @@ export async function POST(req: Request, { params }: Ctx) {
 
   const [row] = await db.insert(rundownItems).values({
     rundownId, projectId, titleKey: parsed.data.titleKey,
-    label: parsed.data.label ?? null, position, data: dataParsed.data as Record<string, unknown>,
+    label: parsed.data.label ?? null, position, data: parsed.data.data,
   }).returning()
   return Response.json(row, { status: 201 })
 }

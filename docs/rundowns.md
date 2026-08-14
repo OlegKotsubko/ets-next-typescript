@@ -36,33 +36,31 @@ Why `project_id` is duplicated on `rundown_items` even though `rundowns.project_
 
 Title shapes vary — a lower-third has different fields than a scoreboard than a bracket. We don't want a table per title type (that would force a migration every time a developer adds a new title — see [database.md](./database.md#migrations-vs-project-creation-vs-overlay-packages)).
 
-Instead, the operator's configured values land in `rundown_items.data`, validated at the API boundary against the title's `model.ts` Zod schema. As shipped in P5a (`app/api/projects/[projectId]/rundowns/[id]/items/route.ts` — the rundown segment folder is `[id]`, matching the sibling rundown CRUD route, since Next forbids two differently-named dynamic slugs at the same path; `id` is the rundown id, aliased to `rundownId` inside the handler):
+Instead, the operator's configured values land in `rundown_items.data`, validated at the API boundary against the title's `model.ts` Zod schema **on save (PATCH)**. Create is a two-step "add then edit" flow: **POST** stores a *draft* (it only checks the `titleKey` exists — full model validation there would reject a freshly-added item whose required fields, e.g. a `min(1)` string, aren't filled in yet); the operator then fills the row's edit form and **PATCH** validates the full model. As shipped in P5a (`app/api/projects/[projectId]/rundowns/[id]/items/route.ts` — the rundown segment folder is `[id]`, matching the sibling rundown CRUD route, since Next forbids two differently-named dynamic slugs at the same path; `id` is the rundown id, aliased to `rundownId` inside the handler):
 
 ```ts
-// loadItemsContext verifies the session + that the rundown belongs to the
-// project, and returns the project's package label (never the UUID).
-const ctx = await loadItemsContext(req, projectId, rundownId);
+// POST (create) — draft: title must exist, but data is NOT model-validated here.
+const ctx = await loadItemsContext(req, projectId, rundownId);            // 401/404 guard
 if (ctx instanceof Response) return ctx;
-
 const model = getTitleModel(ctx.packageLabel, parsed.data.titleKey);
 if (!model) return Response.json({ error: 'unknown titleKey' }, { status: 400 });
-
-const dataParsed = model.safeParse(parsed.data.data);                     // safeParse, not throw
-if (!dataParsed.success) return Response.json(dataParsed.error.flatten(), { status: 400 });
-
 // position is server-assigned (max in rundown + 1), never taken from the body
 const [row] = await db.insert(rundownItems).values({
   rundownId, projectId, titleKey: parsed.data.titleKey,
-  label: parsed.data.label ?? null, position, data: dataParsed.data,
+  label: parsed.data.label ?? null, position, data: parsed.data.data,     // stored as-is (draft)
 }).returning();
+
+// PATCH (save) — full validation against the title's model.ts:
+const dataParsed = model.safeParse(body.data);                            // safeParse, not throw
+if (!dataParsed.success) return Response.json(dataParsed.error.flatten(), { status: 400 });
 ```
 
 The admin **data form is generated from the same `model.ts`, not hand-written**:
 `describeModel` (`lib/titles/describeModel.ts`) serializes the Zod schema to
 plain-JSON field descriptors served by `GET /api/projects/[projectId]/titles`;
-`TitleDataForm` renders inputs from those descriptors and a server 400's
-`fieldErrors` map back onto the fields as badges. The client never holds the Zod
-schema — the route above is the single validation authority.
+`TitleDataForm` renders inputs from those descriptors and the **PATCH** route's
+400 `fieldErrors` map back onto the fields as badges. The client never holds the
+Zod schema — the PATCH route is the single validation authority.
 
 See [titles-system.md](./titles-system.md) for the title registry.
 
