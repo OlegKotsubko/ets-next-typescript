@@ -17,8 +17,8 @@ This document only sequences it.
 | P2 auth | ✅ done | `lib/auth.ts`, `/login`, `/projects`, `proxy.ts` guard, `scripts/create-user.ts` |
 | P3 titles | ✅ done | shared `models/`, three-file title contract, build-time codegen registries (titles + packages), `default` package with two titles, `assets:sync`, `app/dev/title-preview` |
 | P4 bus + SSE | ✅ done | `lib/broadcast/{liveSet,bus}.ts`, Edge SSE route with snapshot replay, `app/(broadcast)/{preview,air}/[rundownId]`, `app/(admin)`/`app/(broadcast)` route-group split |
-| P5a admin shell | ⬜ **next** | — |
-| P5b controller | ⬜ | already planned (14 tasks) |
+| P5a admin shell | ✅ done | gallery + `POST /api/projects`, workspace nav, rundown CRUD (pre-P5a) **plus** rundown-item CRUD: items routes (`.../items[/order\|/[itemId]]`), `/api/projects/[projectId]/titles`, `describeModel` (Zod→descriptors), `TitleDataForm`, Add Template modal, reorder. **Migration-free**; `layer` + per-item color deferred to P5b |
+| P5b controller | ⬜ **next** | already planned (14 tasks); owns the `rundown_items.layer` migration |
 | P6 data CRUD · P7 deploy | ⬜ | — |
 
 Branch `p2-auth`; 40 tests passing; `npm run build` clean. **Everything from P3
@@ -219,10 +219,21 @@ published `show` renders the title on `/air`.
 
 **Plan:** `docs/superpowers/plans/2026-08-13-p4-broadcast-bus.md` (executed).
 
-### P5a — Admin workspace: projects, rundowns, items
+### P5a — Admin workspace: projects, rundowns, items ✅ done
+**Plan:** `docs/superpowers/plans/2026-08-13-p5a-rundown-item-crud.md` (executed).
 **Delivers:** an operator can create a project, build a rundown, and edit item data.
 **This is where multi-project actually arrives** — the schema already supports it,
 so no migration is needed; what's missing is the UI and the route.
+
+> **As shipped (2026-08-13):** two scope points differ from the bullets below.
+> The **Layer 0–10 control and per-item color were deferred to P5b** — both need
+> a `rundown_items` migration, and P5a is migration-free (P5b Task 1 owns the
+> `layer` migration). The Add Template modal collects **title + optional label**;
+> `position` is server-assigned. The data form is **descriptor-driven**:
+> `describeModel` (`lib/titles/describeModel.ts`) serializes each title's Zod
+> `model.ts` to JSON field descriptors served by `/api/projects/[projectId]/titles`;
+> the client renders from those and the real model validates server-side. Reorder
+> shipped as `PUT .../items/order` with `{ orderedIds }`.
 - `/projects` **gallery** listing every `projects` row (the seeded `default` row
   shows up as just another card) + **Add Project** (`POST /api/projects`,
   validating `createProjectSchema`), with the `project_label` dropdown fed by the
@@ -270,7 +281,7 @@ MIDI Remote** plan (the existing one is stale — see its banner). Plans are wri
 **one at a time**: write P<n> → execute → write P<n+1>, so each plan reflects what
 the previous one actually produced.
 
-- **Build order:** ~~P0 → P1 → P2 → P3 → P4~~ (done) → **P5a** → P5b → P6 → P7 →
+- **Build order:** ~~P0 → P1 → P2 → P3 → P4 → P5a~~ (done) → **P5b** → P6 → P7 →
   MIDI feature.
 - **Remaining migrations:** exactly two more are expected —
   `rundown_items.layer` (multi-layer plan, Task 1) and the 3 MIDI collaboration
