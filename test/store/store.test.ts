@@ -11,6 +11,8 @@ import { bracketsApi } from '@/store/apis/bracketsApi'
 import { projectCssApi } from '@/store/apis/projectCssApi'
 import { projectsApi } from '@/store/apis/projectsApi'
 import { overlayPackagesApi } from '@/store/apis/overlayPackagesApi'
+import { rundownItemsApi } from '@/store/apis/rundownItemsApi'
+import { titlesApi } from '@/store/apis/titlesApi'
 
 describe('store', () => {
   it('starts with no selected item', () => {
@@ -37,5 +39,11 @@ describe('store', () => {
     const state = store.getState()
     expect(state[projectsApi.reducerPath]).toBeDefined()
     expect(state[overlayPackagesApi.reducerPath]).toBeDefined()
+  })
+
+  it('registers rundownItemsApi and titlesApi reducers', () => {
+    const state = store.getState()
+    expect(state[rundownItemsApi.reducerPath]).toBeDefined()
+    expect(state[titlesApi.reducerPath]).toBeDefined()
   })
 })
