@@ -36,24 +36,33 @@ Why `project_id` is duplicated on `rundown_items` even though `rundowns.project_
 
 Title shapes vary — a lower-third has different fields than a scoreboard than a bracket. We don't want a table per title type (that would force a migration every time a developer adds a new title — see [database.md](./database.md#migrations-vs-project-creation-vs-overlay-packages)).
 
-Instead, the operator's configured values land in `rundown_items.data`, validated at the API boundary against the title's `model.ts` Zod schema:
+Instead, the operator's configured values land in `rundown_items.data`, validated at the API boundary against the title's `model.ts` Zod schema. As shipped in P5a (`app/api/projects/[projectId]/rundowns/[rundownId]/items/route.ts`):
 
 ```ts
-// app/api/projects/[projectId]/rundowns/[rundownId]/items/route.ts
-const titleRegistry = await getTitleRegistry(params.projectId);
-const title = titleRegistry[body.titleKey];
-if (!title) return new Response('Unknown title', { status: 400 });
+// loadItemsContext verifies the session + that the rundown belongs to the
+// project, and returns the project's package label (never the UUID).
+const ctx = await loadItemsContext(req, projectId, rundownId);
+if (ctx instanceof Response) return ctx;
 
-const data = title.model.parse(body.data);                                // throws ZodError on bad shape
-await db.insert(rundownItems).values({
-  rundownId: params.rundownId,
-  projectId: params.projectId,
-  titleKey: body.titleKey,
-  position: body.position,
-  label: body.label,
-  data,
-});
+const model = getTitleModel(ctx.packageLabel, parsed.data.titleKey);
+if (!model) return Response.json({ error: 'unknown titleKey' }, { status: 400 });
+
+const dataParsed = model.safeParse(parsed.data.data);                     // safeParse, not throw
+if (!dataParsed.success) return Response.json(dataParsed.error.flatten(), { status: 400 });
+
+// position is server-assigned (max in rundown + 1), never taken from the body
+const [row] = await db.insert(rundownItems).values({
+  rundownId, projectId, titleKey: parsed.data.titleKey,
+  label: parsed.data.label ?? null, position, data: dataParsed.data,
+}).returning();
 ```
+
+The admin **data form is generated from the same `model.ts`, not hand-written**:
+`describeModel` (`lib/titles/describeModel.ts`) serializes the Zod schema to
+plain-JSON field descriptors served by `GET /api/projects/[projectId]/titles`;
+`TitleDataForm` renders inputs from those descriptors and a server 400's
+`fieldErrors` map back onto the fields as badges. The client never holds the Zod
+schema — the route above is the single validation authority.
 
 See [titles-system.md](./titles-system.md) for the title registry.
 
@@ -195,8 +204,8 @@ The bus above lives in process memory. On a single-server deployment (Netlify Ed
 
 ## Reordering and removing items
 
-- **Reorder**: PATCH `/api/projects/[projectId]/rundowns/[rundownId]/items/reorder` with `{ itemIds: string[] }`. The server rewrites `position` to match the array order.
-- **Remove**: DELETE `/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]`. If the removed item is currently on AIR, also publish a `hide` event for it.
+- **Reorder**: PUT `/api/projects/[projectId]/rundowns/[rundownId]/items/order` with `{ orderedIds: string[] }` (shipped shape). The server verifies `orderedIds` is the rundown's exact item set, then rewrites `position` to match the array order.
+- **Remove**: DELETE `/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]`. If the removed item is currently on AIR, also publish a `hide` event for it (the `hide`-on-AIR publish is P5b — the DELETE route itself shipped in P5a).
 
 ## Controller behavior
 
