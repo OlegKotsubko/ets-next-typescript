@@ -9,7 +9,10 @@ const options: TitleOption[] = [
 
 it('creates an item with the chosen title and its defaults', async () => {
   const onCreate = vi.fn().mockResolvedValue(undefined)
-  render(<AddTemplateModal open options={options} onClose={vi.fn()} onCreate={onCreate} />)
+  render(<AddTemplateModal open
+    options={options}
+    onClose={vi.fn()}
+    onCreate={onCreate} />)
   fireEvent.mouseDown(screen.getByRole('combobox', { name: /template/i }))
   fireEvent.click(await screen.findByText('Lower Third'))
   fireEvent.click(screen.getByRole('button', { name: /add/i }))

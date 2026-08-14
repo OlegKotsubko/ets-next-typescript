@@ -18,7 +18,9 @@ describe('describeModel', () => {
   const byName = Object.fromEntries(describeModel(model).map((f) => [f.name, f]))
 
   it('maps a bounded required string', () => {
-    expect(byName.playerName).toMatchObject({ kind: 'string', required: true, minLength: 1, maxLength: 40, label: 'Player Name', multiline: false })
+    expect(byName.playerName).toMatchObject({
+      kind: 'string', required: true, minLength: 1, maxLength: 40, label: 'Player Name', multiline: false,
+    })
   })
   it('marks optional() fields not required', () => {
     expect(byName.teamName.required).toBe(false)
@@ -43,8 +45,8 @@ describe('describeModel', () => {
 describe('computeDefaults', () => {
   it('gives every described field a controlled default', () => {
     const d = computeDefaults(LowerThirdFields)
-    expect(d.playerName).toBe('')       // required string
-    expect(d.position).toBe('guard')    // enum → first option
-    expect(d.teamName).toBe('')         // optional string still controlled
+    expect(d.playerName).toBe('') // required string
+    expect(d.position).toBe('guard') // enum → first option
+    expect(d.teamName).toBe('') // optional string still controlled
   })
 })

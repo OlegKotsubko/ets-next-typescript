@@ -4,7 +4,10 @@ import { z } from 'zod'
 
 const dbMock = { select: vi.fn(), update: vi.fn(), delete: vi.fn() }
 vi.mock('@/db', () => ({ db: dbMock }))
-vi.mock('drizzle-orm', async (o) => { const a = await o<typeof import('drizzle-orm')>(); return { ...a, eq: vi.fn(a.eq), and: vi.fn(a.and) } })
+vi.mock('drizzle-orm', async (o) => {
+  const a = await o<typeof import('drizzle-orm')>()
+  return { ...a, eq: vi.fn(a.eq), and: vi.fn(a.and) }
+})
 const getTitleModelMock = vi.fn()
 vi.mock('@/lib/titles/registry', () => ({ getTitleModel: (...a: unknown[]) => getTitleModelMock(...a) }))
 const loadCtxMock = vi.fn()
@@ -12,10 +15,14 @@ vi.mock('@/lib/rundown-items/context', () => ({ loadItemsContext: (...a: unknown
 
 const { PATCH, DELETE } = await import('@/app/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]/route')
 const P = '11111111-1111-1111-1111-111111111111', R = '22222222-2222-2222-2222-222222222222', I = '33333333-3333-3333-3333-333333333333'
-function req(body?: unknown, method = 'PATCH') { return new Request('http://localhost/x', { method, body: body ? JSON.stringify(body) : undefined }) }
+function req(body?: unknown, method = 'PATCH') {
+  return new Request('http://localhost/x', { method, body: body ? JSON.stringify(body) : undefined })
+}
 function ctx() { return { params: Promise.resolve({ projectId: P, rundownId: R, itemId: I }) } }
 function selectReturns(rows: unknown[]) {
-  dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue(rows) }) }) })
+  dbMock.select.mockReturnValue({
+    from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue(rows) }) }),
+  })
 }
 beforeEach(() => { vi.clearAllMocks(); loadCtxMock.mockResolvedValue({ packageLabel: 'default' }) })
 

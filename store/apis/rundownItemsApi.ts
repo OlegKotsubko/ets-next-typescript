@@ -29,7 +29,9 @@ export const rundownItemsApi = createApi({
       invalidatesTags: (_r, _e, { rundownId }) => [{ type: 'Item', id: `LIST:${rundownId}` }],
     }),
     reorderItems: b.mutation<RundownItem[], { projectId: string; rundownId: string; orderedIds: string[] }>({
-      query: ({ projectId, rundownId, orderedIds }) => ({ url: `${base(projectId, rundownId)}/order`, method: 'PUT', body: { orderedIds } }),
+      query: ({ projectId, rundownId, orderedIds }) => ({
+        url: `${base(projectId, rundownId)}/order`, method: 'PUT', body: { orderedIds },
+      }),
       invalidatesTags: (_r, _e, { rundownId }) => [{ type: 'Item', id: `LIST:${rundownId}` }],
     }),
   }),

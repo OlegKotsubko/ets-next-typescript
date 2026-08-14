@@ -10,7 +10,9 @@ const fields: FieldDescriptor[] = [
 
 it('renders one input per descriptor and submits values', async () => {
   const onSubmit = vi.fn().mockResolvedValue(undefined)
-  render(<TitleDataForm fields={fields} defaultValues={{ playerName: 'Jo', position: 'guard' }} onSubmit={onSubmit} />)
+  render(<TitleDataForm fields={fields}
+    defaultValues={{ playerName: 'Jo', position: 'guard' }}
+    onSubmit={onSubmit} />)
   expect(screen.getByLabelText('Player Name')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /save/i }))
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ playerName: 'Jo', position: 'guard' })))
@@ -18,7 +20,9 @@ it('renders one input per descriptor and submits values', async () => {
 
 it('shows a field badge when onSubmit returns fieldErrors', async () => {
   const onSubmit = vi.fn().mockResolvedValue({ fieldErrors: { playerName: ['Required'] } })
-  render(<TitleDataForm fields={fields} defaultValues={{ playerName: '' }} onSubmit={onSubmit} />)
+  render(<TitleDataForm fields={fields}
+    defaultValues={{ playerName: '' }}
+    onSubmit={onSubmit} />)
   fireEvent.click(screen.getByRole('button', { name: /save/i }))
   await waitFor(() => expect(screen.getByText('Required')).toBeInTheDocument())
 })

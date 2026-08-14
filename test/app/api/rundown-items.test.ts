@@ -57,7 +57,13 @@ describe('POST items', () => {
   it('201, position auto-appended, projectId+rundownId from URL', async () => {
     getTitleModelMock.mockReturnValue(z.object({ playerName: z.string().min(1) }))
     // max(position) query → returns [{ position: 4 }]
-    dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ position: 4 }]) }) }) }) })
+    dbMock.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ position: 4 }]) }),
+        }),
+      }),
+    })
     const row = { id: 'i1', rundownId: R, projectId: P, titleKey: 'lower-third', position: 5 }
     const returning = vi.fn().mockResolvedValue([row])
     const values = vi.fn().mockReturnValue({ returning })
@@ -65,5 +71,22 @@ describe('POST items', () => {
     const res = await POST(req({ titleKey: 'lower-third', data: { playerName: 'Jo' }, projectId: 'evil' }), ctx())
     expect(res.status).toBe(201)
     expect(values).toHaveBeenCalledWith(expect.objectContaining({ projectId: P, rundownId: R, position: 5, titleKey: 'lower-third' }))
+  })
+})
+
+describe('GET items', () => {
+  it('401 when loadItemsContext returns a Response', async () => {
+    loadCtxMock.mockResolvedValue(new Response('Unauthorized', { status: 401 }))
+    expect((await GET(req(undefined, 'GET'), ctx())).status).toBe(401)
+  })
+
+  it('200 returns the rundown items ordered by position', async () => {
+    const rows = [{ id: 'i1', position: 0 }, { id: 'i2', position: 1 }]
+    dbMock.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockResolvedValue(rows) }) }),
+    })
+    const res = await GET(req(undefined, 'GET'), ctx())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual(rows)
   })
 })

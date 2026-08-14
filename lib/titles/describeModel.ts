@@ -17,37 +17,38 @@ function humanize(name: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Zod internals are untyped; this module reads _def deliberately (see the
+// describeModel tests, which are the oracle for the shape).
 function unwrap(field: any): any {
   let inner = field
   while (inner?._def && WRAPPERS.has(inner._def.typeName)) inner = inner._def.innerType
   return inner
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function checkValue(inner: any, kind: string): number | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const c = (inner._def.checks ?? []).find((x: any) => x.kind === kind)
   return c ? c.value : undefined
 }
 
 export function describeModel(model: z.ZodTypeAny): FieldDescriptor[] {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shape = (model as any).shape as Record<string, z.ZodTypeAny> | undefined
   if (!shape) return []
   const out: FieldDescriptor[] = []
   for (const [name, field] of Object.entries(shape)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const required = !WRAPPERS.has((field as any)._def.typeName)
     const inner = unwrap(field)
     const label = humanize(name)
     const tn = inner._def.typeName
     if (tn === 'ZodString') {
       const maxLength = checkValue(inner, 'max')
-      out.push({ name, label, kind: 'string', required, minLength: checkValue(inner, 'min'), maxLength, multiline: maxLength === undefined || maxLength > 60 })
+      out.push({
+        name, label, kind: 'string', required,
+        minLength: checkValue(inner, 'min'), maxLength,
+        multiline: maxLength === undefined || maxLength > 60,
+      })
     } else if (tn === 'ZodNumber') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      out.push({ name, label, kind: 'number', required, int: (inner._def.checks ?? []).some((c: any) => c.kind === 'int'), min: checkValue(inner, 'min'), max: checkValue(inner, 'max') })
+      const int = (inner._def.checks ?? []).some((c: any) => c.kind === 'int')
+      out.push({ name, label, kind: 'number', required, int, min: checkValue(inner, 'min'), max: checkValue(inner, 'max') })
     } else if (tn === 'ZodEnum') {
       out.push({ name, label, kind: 'enum', required, options: [...inner._def.values] })
     } else if (tn === 'ZodBoolean') {
