@@ -5,10 +5,13 @@ import { createRundownItemSchema } from '@/db/schemas/rundown-items'
 import { getTitleModel } from '@/lib/titles/registry'
 import { loadItemsContext } from '@/lib/rundown-items/context'
 
-type Ctx = { params: Promise<{ projectId: string; rundownId: string }> }
+// The rundown segment is `[id]` to match the sibling rundown CRUD route
+// (Next forbids two differently-named dynamic slugs at the same path); we alias
+// it to `rundownId` locally for clarity.
+type Ctx = { params: Promise<{ projectId: string; id: string }> }
 
 export async function GET(req: Request, { params }: Ctx) {
-  const { projectId, rundownId } = await params
+  const { projectId, id: rundownId } = await params
   const ctx = await loadItemsContext(req, projectId, rundownId)
   if (ctx instanceof Response) return ctx
   const rows = await db.select().from(rundownItems)
@@ -18,7 +21,7 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 export async function POST(req: Request, { params }: Ctx) {
-  const { projectId, rundownId } = await params
+  const { projectId, id: rundownId } = await params
   const ctx = await loadItemsContext(req, projectId, rundownId)
   if (ctx instanceof Response) return ctx
 

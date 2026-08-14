@@ -4,10 +4,12 @@ import { rundownItems } from '@/db/schema'
 import { reorderRundownItemsSchema } from '@/db/schemas/rundown-items'
 import { loadItemsContext } from '@/lib/rundown-items/context'
 
-type Ctx = { params: Promise<{ projectId: string; rundownId: string }> }
+// The rundown segment is `[id]` (matches the sibling rundown CRUD route);
+// aliased to `rundownId` locally.
+type Ctx = { params: Promise<{ projectId: string; id: string }> }
 
 export async function PUT(req: Request, { params }: Ctx) {
-  const { projectId, rundownId } = await params
+  const { projectId, id: rundownId } = await params
   const ctx = await loadItemsContext(req, projectId, rundownId)
   if (ctx instanceof Response) return ctx
 

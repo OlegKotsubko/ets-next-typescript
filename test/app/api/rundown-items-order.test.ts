@@ -8,11 +8,11 @@ vi.mock('drizzle-orm', async (o) => {
 })
 const loadCtxMock = vi.fn()
 vi.mock('@/lib/rundown-items/context', () => ({ loadItemsContext: (...a: unknown[]) => loadCtxMock(...a) }))
-const { PUT } = await import('@/app/api/projects/[projectId]/rundowns/[rundownId]/items/order/route')
+const { PUT } = await import('@/app/api/projects/[projectId]/rundowns/[id]/items/order/route')
 const P = '11111111-1111-1111-1111-111111111111', R = '22222222-2222-2222-2222-222222222222'
 const A = '33333333-3333-3333-3333-333333333333', B = '44444444-4444-4444-4444-444444444444'
 function req(body: unknown) { return new Request('http://localhost/x', { method: 'PUT', body: JSON.stringify(body) }) }
-function ctx() { return { params: Promise.resolve({ projectId: P, rundownId: R }) } }
+function ctx() { return { params: Promise.resolve({ projectId: P, id: R }) } }
 // A .select().from().where().orderBy() chain resolving to `rows`.
 function chain(rows: unknown[]) {
   return { from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockResolvedValue(rows) }) }) }

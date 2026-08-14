@@ -20,14 +20,14 @@ vi.mock('@/lib/titles/registry', () => ({ getTitleModel: (...a: unknown[]) => ge
 const loadCtxMock = vi.fn()
 vi.mock('@/lib/rundown-items/context', () => ({ loadItemsContext: (...a: unknown[]) => loadCtxMock(...a) }))
 
-const { POST, GET } = await import('@/app/api/projects/[projectId]/rundowns/[rundownId]/items/route')
+const { POST, GET } = await import('@/app/api/projects/[projectId]/rundowns/[id]/items/route')
 
 const P = '11111111-1111-1111-1111-111111111111'
 const R = '22222222-2222-2222-2222-222222222222'
 function req(body?: unknown, method = 'POST') {
   return new Request('http://localhost/x', { method, body: body ? JSON.stringify(body) : undefined })
 }
-function ctx() { return { params: Promise.resolve({ projectId: P, rundownId: R }) } }
+function ctx() { return { params: Promise.resolve({ projectId: P, id: R }) } }
 
 beforeEach(() => {
   vi.clearAllMocks()

@@ -5,7 +5,9 @@ import { updateRundownItemSchema } from '@/db/schemas/rundown-items'
 import { getTitleModel } from '@/lib/titles/registry'
 import { loadItemsContext } from '@/lib/rundown-items/context'
 
-type Ctx = { params: Promise<{ projectId: string; rundownId: string; itemId: string }> }
+// The rundown segment is `[id]` (matches the sibling rundown CRUD route);
+// aliased to `rundownId` locally.
+type Ctx = { params: Promise<{ projectId: string; id: string; itemId: string }> }
 
 async function loadItem(projectId: string, rundownId: string, itemId: string) {
   const [row] = await db.select().from(rundownItems)
@@ -15,7 +17,7 @@ async function loadItem(projectId: string, rundownId: string, itemId: string) {
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
-  const { projectId, rundownId, itemId } = await params
+  const { projectId, id: rundownId, itemId } = await params
   const ctx = await loadItemsContext(req, projectId, rundownId)
   if (ctx instanceof Response) return ctx
 
@@ -42,7 +44,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(req: Request, { params }: Ctx) {
-  const { projectId, rundownId, itemId } = await params
+  const { projectId, id: rundownId, itemId } = await params
   const ctx = await loadItemsContext(req, projectId, rundownId)
   if (ctx instanceof Response) return ctx
   const [row] = await db.delete(rundownItems)

@@ -36,7 +36,7 @@ Why `project_id` is duplicated on `rundown_items` even though `rundowns.project_
 
 Title shapes vary — a lower-third has different fields than a scoreboard than a bracket. We don't want a table per title type (that would force a migration every time a developer adds a new title — see [database.md](./database.md#migrations-vs-project-creation-vs-overlay-packages)).
 
-Instead, the operator's configured values land in `rundown_items.data`, validated at the API boundary against the title's `model.ts` Zod schema. As shipped in P5a (`app/api/projects/[projectId]/rundowns/[rundownId]/items/route.ts`):
+Instead, the operator's configured values land in `rundown_items.data`, validated at the API boundary against the title's `model.ts` Zod schema. As shipped in P5a (`app/api/projects/[projectId]/rundowns/[id]/items/route.ts` — the rundown segment folder is `[id]`, matching the sibling rundown CRUD route, since Next forbids two differently-named dynamic slugs at the same path; `id` is the rundown id, aliased to `rundownId` inside the handler):
 
 ```ts
 // loadItemsContext verifies the session + that the rundown belongs to the
@@ -204,8 +204,8 @@ The bus above lives in process memory. On a single-server deployment (Netlify Ed
 
 ## Reordering and removing items
 
-- **Reorder**: PUT `/api/projects/[projectId]/rundowns/[rundownId]/items/order` with `{ orderedIds: string[] }` (shipped shape). The server verifies `orderedIds` is the rundown's exact item set, then rewrites `position` to match the array order.
-- **Remove**: DELETE `/api/projects/[projectId]/rundowns/[rundownId]/items/[itemId]`. If the removed item is currently on AIR, also publish a `hide` event for it (the `hide`-on-AIR publish is P5b — the DELETE route itself shipped in P5a).
+- **Reorder**: PUT `/api/projects/[projectId]/rundowns/[id]/items/order` with `{ orderedIds: string[] }` (shipped shape; `[id]` = the rundown). The server verifies `orderedIds` is the rundown's exact item set, then rewrites `position` to match the array order.
+- **Remove**: DELETE `/api/projects/[projectId]/rundowns/[id]/items/[itemId]`. If the removed item is currently on AIR, also publish a `hide` event for it (the `hide`-on-AIR publish is P5b — the DELETE route itself shipped in P5a).
 
 ## Controller behavior
 
