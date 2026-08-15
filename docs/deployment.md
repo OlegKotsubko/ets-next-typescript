@@ -71,41 +71,32 @@ Commit this at the repo root:
 `@netlify/plugin-nextjs` is the official adapter. It:
 
 - Routes Next.js API routes and Server Components to **Netlify Functions** (Node runtime).
-- Routes `runtime = 'edge'` routes to **Netlify Edge Functions**.
 - Serves static files from `.next/static` and `public/` via the CDN.
 
-No extra configuration needed for the App Router or Edge runtime — the plugin detects both.
+No extra configuration needed — the plugin detects the App Router automatically.
 
-## 4. SSE runs on Edge Functions
+## 4. SSE runs on Node (not Edge)
 
 **This is the most important deployment-specific detail.**
 
-Netlify Functions have a **10-second timeout** (26 seconds on Pro plans). SSE connections must stay open for the entire show. So we run the SSE route on **Netlify Edge Functions**, which support streaming responses indefinitely.
+The SSE stream route runs on the **default Node runtime**, the same runtime as the publisher routes (`take`/`preview`/`hide`), so they share the **in-process broadcast bus**. An Edge SSE route can't see a Node `publish()` — Edge and Node compile to separate bundles with separate module state — which breaks the bus even in `next dev`. See [preview-air.md](./preview-air.md#caveat-the-edgenode-runtime-split).
 
-In Next.js, this is one line per route:
+The trade-off is Netlify's Node-function timeout (**~10s**, 26s on Pro): a long SSE stream is truncated and the client reconnects. This is acceptable because the client **holds its rendered set across `EventSource` auto-reconnects** and the reconnect re-hydrates from the current snapshot, so it's visually seamless. A always-on deployment (a single Node server) or a cross-instance broker removes the churn — see the single-server caveat.
 
-```ts
-// app/api/broadcast/[rundownId]/stream/route.ts
-export const runtime = 'edge';
-```
-
-The Netlify plugin maps this automatically. No `netlify.toml` change needed.
-
-Other routes stay on the default Node runtime so they can use:
-- `@neondatabase/serverless` (works on Edge too, but Node is fine and gives us full Node APIs).
-- `better-auth` (Node-only in some auth flows).
-- File-system access in the project sync script (Node-only).
+Node routes also need Node APIs anyway:
+- `better-auth` session helpers (Node-only in some flows).
+- `@neondatabase/serverless` (HTTP driver; runs on Node).
 
 ## 5. Build pipeline
 
 `npm run build` on Netlify executes (in order):
 
 1. `prebuild` script:
-   - `npm run assets:sync` — copies `projects/*/{assets,styles}` → `public/projects/*`.
+   - `npm run titles:generate` — regenerates the overlay registry (static imports).
 2. `next build` — produces `.next/`.
-3. `@netlify/plugin-nextjs` packages the output for Netlify Functions and Edge Functions.
+3. `@netlify/plugin-nextjs` packages the output for Netlify Functions.
 
-The `predev` hook does the same asset sync for local development. (There is no `projects:sync`: projects are created in the UI and overlay-package folders are discovered by a directory scan — see [projects-system.md](./projects-system.md).)
+The `predev` hook runs the same registry codegen for local development. Overlays are global (organized by discipline/category — see [projects-system.md](./projects-system.md)); there is no per-tournament package to sync.
 
 ## 6. Migrations workflow
 
@@ -189,21 +180,21 @@ Netlify's default domain (`yourapp.netlify.app`) works for testing. For producti
 The MVP relies on Netlify's built-in logs:
 
 - **Functions** tab — invocation count and errors for each Route Handler.
-- **Edge Functions** tab — SSE stream invocations and warning/error logs.
-- **Deploy log** — surfaces `prebuild` failures (most often: a path issue in `assets:sync`).
+- **Functions** tab — SSE stream and API invocations, warning/error logs.
+- **Deploy log** — surfaces `prebuild` failures (most often: `titles:generate` failing to resolve an overlay).
 
 For richer telemetry later (Sentry, OpenTelemetry, Vercel Analytics equivalents), add after MVP.
 
 ## 10. Cost notes
 
-- **Netlify Free tier** is generous for an MVP: 125k Function invocations/month. SSE counts as one Edge Function invocation per connection, regardless of duration — long-lived connections are cheap.
+- **Netlify Free tier** is generous for an MVP: 125k Function invocations/month. On Node functions, SSE connections are capped (~10s) and reconnect; each reconnect is another short invocation (the client re-hydrates seamlessly).
 - **Neon Free tier** includes 0.5 GB storage and one project with multiple branches. For an MVP this is enough; for production budget ~$19/month on Neon's Pro tier.
 - The **Neon ↔ Netlify integration** counts auto-branches against your Neon quota — disable if you hit limits.
 
 ## Common pitfalls
 
 - **Forgot to set `BETTER_AUTH_URL` for Deploy Previews.** Login on a preview URL succeeds but immediately redirects back to `/login`. Fix: set the variable to `$DEPLOY_PRIME_URL` for the `deploy-preview` context.
-- **SSE 504 timeout in production.** The route isn't on Edge runtime. Add `export const runtime = 'edge'`. See `/api/broadcast/[rundownId]/stream/route.ts`.
-- **`assets:sync` failed during the build.** Usually a path issue (`projects/<slug>/assets/` doesn't exist). The script should `mkdir -p` defensively; until then, ensure every project folder includes an empty `assets/` directory.
+- **SSE connection drops after ~10s in production.** Expected on Netlify Node functions — the client auto-reconnects and re-hydrates from the snapshot. For churn-free streaming use an always-on Node host or a cross-instance broker. See [preview-air.md](./preview-air.md#the-in-process-bus).
+- **`titles:generate` failed during the build.** An overlay folder is missing one of its required files, or an import doesn't resolve. Check the `prebuild` log.
 - **Forgot to migrate the prod DB before merging.** Code expects new columns that don't exist. The site returns 500s. Fix: apply the migration manually, then redeploy. **Always migrate before you ship code that depends on the new schema.**
-- **`@netlify/plugin-nextjs` version mismatch.** If the plugin doesn't recognize `runtime = 'edge'`, you're on an old version. Upgrade to `^5.0.0`.
+- **`@netlify/plugin-nextjs` version mismatch.** Upgrade to `^5.0.0`.

@@ -45,7 +45,7 @@ Apply the Drizzle schema to your Neon dev branch:
 npm run db:migrate
 ```
 
-This creates `users`, `sessions`, `projects`, and all the entity tables (`players`, `talents`, `teams`, `team_players`, `sponsors`, `assets`, `videos`, `brackets`, `rundowns`, `rundown_items`, `project_css`).
+This creates `users`, `sessions`, `projects` (tournaments), the entity tables (`players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `tags`, `themes`, `assets`, `videos`), `displays`, `settings`, and the content tree (`rundowns`, `rundown_overlays`, `rundown_overlay_data`).
 
 > If you ever want to inspect the live database, `npm run db:studio` opens Drizzle Studio in your browser.
 
@@ -54,10 +54,10 @@ This creates `users`, `sessions`, `projects`, and all the entity tables (`player
 There is no public sign-up screen. Insert a user via Drizzle Studio (`npm run db:studio`) or with a one-liner:
 
 ```bash
-npx tsx scripts/create-user.ts you@example.com 'a-strong-password'
+npx tsx scripts/create-user.ts your-username 'a-strong-password'
 ```
 
-The script hashes the password and inserts a row into `users`. See [auth.md](./auth.md#bootstrapping-the-first-user) for the script source.
+The script hashes the password and inserts a row into `users`. Login is by **username**. See [auth.md](./auth.md#bootstrapping-the-first-user) for the script source.
 
 ## 5. Start the dev server
 
@@ -67,42 +67,39 @@ npm run dev
 
 Open <http://localhost:3000/login>, sign in with the user you created in step 4, and you'll land on the project gallery.
 
-## 6. Create your first project
+## 6. Enter a tournament
 
-The repo ships with one overlay package at `projects/sample/` (its folder name, `sample`, is the package **label**). In the gallery, click **Add Project**, give it a name, pick a `project_mode`, choose **sample** in the `project_label` dropdown, and set a date. That inserts a `projects` row and opens the project's **Data** / **Overlays** workspace.
-
-> There is no `projects:sync` step. Overlay-package folders are discovered automatically by scanning `projects/`; projects themselves are created here in the UI. See [projects-system.md](./projects-system.md).
+A "project" is a **tournament** (absorbed from the weplay tournament service — see [projects-system.md](./projects-system.md#projects-are-tournaments)). Seed a couple of tournament rows into `projects` for local dev (via `npm run db:studio` or a seed script), then open the gallery at `/projects`, filter by status, and click one to open its **Data / Overlays / MIDI / Bluetooth** workspace. There is no "create project" flow.
 
 ## 7. (Optional) Hook up OBS
 
-Once you've created an overlay (rundown) in your project, set up OBS to consume it:
+Build a rundown of overlays and create a **display**, then point OBS at that display:
 
 1. **+** in OBS Sources → **Browser**.
-2. URL: `http://localhost:3000/air/<rundownId>` (copy the rundown ID from the admin URL).
+2. URL: `http://localhost:3000/air/<displayUuid>` (the display's public UUID).
 3. Width/Height: **1920 / 1080**.
-4. **Custom CSS**: leave empty — the project's `project.css` is loaded automatically.
+4. **Custom CSS**: leave empty — the active theme's CSS variables are applied automatically.
 5. Check **Refresh browser when scene becomes active**.
 
-Now clicking AIR in the admin controller will show the title in OBS. See [preview-air.md](./preview-air.md#obs--vmix-setup) for vMix instructions and troubleshooting.
+Now taking an overlay to air in the controller will show it in OBS. See [preview-air.md](./preview-air.md#obs--vmix-setup) for vMix instructions and troubleshooting.
 
 ## Common scripts
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Dev server on http://localhost:3000. Runs `dev:assets` first. |
-| `npm run build` | Production build. Runs `assets:sync` first. |
+| `npm run dev` | Dev server on http://localhost:3000. |
+| `npm run build` | Production build. |
+| `npm run titles:generate` | Regenerate the overlay registry (static imports). Runs via `predev`/`prebuild`. |
 | `npm run db:generate` | Generate a new SQL migration from schema changes. |
 | `npm run db:migrate` | Apply pending migrations against `DATABASE_URL`. |
 | `npm run db:studio` | Open Drizzle Studio. |
-| `npm run assets:sync` | Copy `projects/*/{assets,styles}` into `public/projects/*`. |
-| `npm run dev:assets` | Watch `projects/*/{assets,styles}` and copy changes into `public/projects/*`. |
 
 ## When things go wrong
 
 - **`relation "users" does not exist`** — you skipped step 3. Run `npm run db:migrate`.
 - **Login form rejects valid credentials** — `BETTER_AUTH_URL` doesn't match the origin you're loading the app from, or `BETTER_AUTH_SECRET` is empty. See [auth.md](./auth.md#troubleshooting).
-- **`/air/<id>` shows a blank page in OBS** — open the URL in a regular browser first to check for errors. The most common cause is a rundown ID that doesn't exist, or a project whose `project_label` points at a missing overlay-package folder. See [preview-air.md](./preview-air.md#troubleshooting).
-- **Fonts don't load in OBS** — check that `public/projects/<slug>/assets/fonts/` exists after running `npm run dev:assets`. See [projects-system.md](./projects-system.md#font-pipeline).
+- **`/air/<displayUuid>` shows a blank page in OBS** — open the URL in a regular browser first to check for errors. The most common cause is a display UUID that doesn't exist, or no overlay currently on air for it. See [preview-air.md](./preview-air.md).
+- **Fonts or colors look wrong in OBS** — the tournament has no active theme, so its CSS variables aren't set. Activate a theme. See [projects-system.md](./projects-system.md#theming).
 
 ## Working on asset-related features
 

@@ -1,61 +1,43 @@
 # Roadmap
 
-## MVP — what we are building
+## Core — what this monolith builds
 
-The MVP scope is everything described in the rest of the docs. Specifically:
+The core is everything described in the rest of the docs:
 
-- **Authentication.** Email + password login via better-auth; no public sign-up. See [auth.md](./auth.md).
-- **Project gallery + Add Project.** `/projects` lists projects (DB rows) as a grid and has an **Add Project** button: a dialog with `project_name`, `project_mode` (`team_vs_team` / `player_vs_player`), `project_picture`, `project_label` (dropdown of overlay-package folders under `projects/`), `project_date`. See [projects-system.md](./projects-system.md#creating-a-project-operator).
-- **Project workspace.** Two links: **Data** and **Overlays**. (MIDI/Bluetooth are no longer in the primary nav; still sketched below.)
-- **Data CRUD.** Project Assets, Players, Talents, Teams (with the `team_players` join + captain/stand-in flags), Sponsors, Project CSS, Project Videos, Tournament Brackets. Players/Talents/bracket matches carry an open `extra` string-map. See [data-entities.md](./data-entities.md).
-- **Brackets.** Single-elimination generated from a participant count (8 → 4 Quarterfinal + 2 Semifinal + 1 Final); matches pair teams or players per `project_mode`. Read-only in overlays.
-- **Overlays (rundowns).** Create overlays, add overlay components, configure each via the Zod-driven form, reorder, delete. Each overlay component ships a `settings.ts` (preview, stingers, color, background/video, full-screen splash). See [rundowns.md](./rundowns.md) and [titles-system.md](./titles-system.md).
-- **Controller.** HIDE / AIR per item; in-process broadcast event bus; per-rundown SSE channels for `preview` and `air`. See [rundowns.md](./rundowns.md) and [preview-air.md](./preview-air.md).
-- **Broadcast render targets.** `/preview/[rundownId]` and `/air/[rundownId]` as OBS/vMix browser sources, with per-project CSS and self-hosted fonts. See [preview-air.md](./preview-air.md) and [projects-system.md](./projects-system.md).
-- **Deployment.** Netlify (Production / Deploy Preview / Branch Deploys) with Neon database branching, Edge runtime for SSE. See [deployment.md](./deployment.md).
+- **Authentication.** Username + password (session cookie) via better-auth; no public sign-up; a **guest-user** flow (a guest lands on their rundown's controller). See [auth.md](./auth.md).
+- **Tournaments.** `/projects` is a **tournament gallery** — browse/filter by status, favourite, and enter (tournaments are not created here). See [projects-system.md](./projects-system.md#projects-are-tournaments).
+- **Tournament workspace.** Links: **Data**, **Overlays**, **MIDI**, **Bluetooth**.
+- **Data CRUD.** Players (+ typed photos), Teams (+ logos, roster with captain/stand-in), Talents, Sponsors, Matches & Brackets, Tags/Disciplines, Themes, Assets, Videos — all `project_id`-scoped. See [data-entities.md](./data-entities.md).
+- **Overlays (rundowns).** Build a rundown of overlays; configure each from its **widget schema** (`input_type`/`choices`/`can_live_update`); set `layer`, `color`, `display_filter`, `is_fullscreen`; reorder; delete. See [rundowns.md](./rundowns.md), [titles-system.md](./titles-system.md).
+- **Controller.** Preview → air switching with a layered composition, per-overlay hide / hide-air, live-update (only `can_live_update` fields), thread-widget actions, and the full-screen-clears-air rule. See [rundowns.md](./rundowns.md#the-controller-live).
+- **Displays & broadcast.** Output addressed by **display UUID**; `/preview/[uuid]` and `/air/[uuid]` render a set of overlays on a transparent 1920×1080 canvas with GSAP animations and stinger mixers, driven by SSE; `display_filter` routes one tournament to many displays. See [preview-air.md](./preview-air.md).
+- **Theming.** The active tournament theme's colors become `:root` CSS variables at runtime. See [projects-system.md](./projects-system.md#theming).
+- **Deployment.** Netlify with Neon database branching. See [deployment.md](./deployment.md).
 
-## Out of MVP (Beta — sketched, not built)
+## Roadmap — real subsystems, staged for a later pass
 
-These are no longer in the primary workspace nav (which is just **Data** and **Overlays**); they remain sketched here for a later iteration. No functionality ships in MVP.
+These are **shipped features in the etalon** (`ets-react-poc`) and its Django backend, deferred from the first monolith pass but documented as intended work (source pointers in parentheses):
 
-### MIDI (Beta)
+- **MIDI control.** Map MIDI notes (note 1–88, velocity, `trigger_type` overlay|event, `overlay_action` on/off/next/update/start) to overlay/event actions, so an operator drives the show from a hardware controller (Web MIDI API). (`apps/midi`, `components/Midi/**`)
+- **Bluetooth heart-rate.** Pair BLE heart-rate straps (Web Bluetooth API) → stream readings over a WebSocket → render on heart-rate overlays (charted with chart.js). (`pages/bluetooth`, `HeartRateSocketContext`)
+- **WebSocket timer.** A countdown/stopwatch synced to overlay timers over a dedicated WebSocket (start/stop/reset/resume/tick). (`ws v1/timer/`, `TimerConsumer`)
+- **MRI (Marvel Rivals) live data.** The overlay connects **directly** to a proxy's draft/stats SSE streams (bypassing the ETS backend), with an operator-set **`delay` buffer** to line graphics up with delayed broadcast video; big-integer `room_id` must be preserved as a string. (`api/mri.js`, `hooks/useDraftStream`, `useMriStatsFields`)
+- **ATEM camera switching.** The match **seating** (left/right team + players) drives Blackmagic ATEM camera switches. (`apps/seatings`, `atem_ip_address` in Settings)
 
-**Goal.** Let the operator drive HIDE / AIR / SELECT from a hardware MIDI controller (e.g., a Stream Deck, Akai APC, Behringer X-Touch). Each rundown item is bound to a pad/button; pressing the pad triggers the same Route Handlers the on-screen controller hits today.
+## Deferred entirely (not in the etalon, or explicitly out)
 
-**Sketch.** A small client-side service uses the [Web MIDI API](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) (already in Chrome/Edge) to subscribe to MIDI input events. A "MIDI mappings" admin screen lets the operator bind notes/CCs to rundown items. Mappings are stored per-project (`midi_mappings` table) and roundtripped via RTK Query like any other entity.
+- Scheduled / timed transitions; transition animations between overlays.
+- Multi-*channel* rundowns (independent air buses).
+- Multi-user concurrent editing; per-user roles/permissions; audit log.
+- Tournament bracket auto-progression (advancing winners) — brackets render read-only.
+- Cross-instance broadcast bus (Redis / Postgres `LISTEN`) for multi-instance deploys. See [preview-air.md](./preview-air.md#caveat-single-server-pubsub).
 
-**Why not MVP.** Hardware integration adds enough complexity (device permissions, mapping UI, conflict resolution) that it deserves its own iteration after the rest is stable.
+## When the core ships
 
-### Bluetooth (Beta)
-
-**Goal.** Let presenters carry a small Bluetooth remote (a clicker) that pages through a per-presenter rundown — useful for keynote-style events.
-
-**Sketch.** Uses the [Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API) to pair a HID device, listen for input characteristic notifications, and dispatch AIR / HIDE actions. Same Route Handlers as the on-screen controller.
-
-**Why not MVP.** Web Bluetooth is browser-locked (Chrome/Edge only, requires user gesture, no Safari support). Worth waiting for either broader support or a clear request from the user base.
-
-## Out of MVP entirely (not even sketched)
-
-Features we've consciously deferred:
-
-- **Scheduled transitions** (auto-advance a title after N seconds).
-- **Animation between titles** (the Screenshot 6 "Transition" dropdown is a placeholder — no transitions in MVP).
-- **Multiple simultaneous AIR layers** per rundown (e.g., a persistent ticker plus an overlapping lower-third). MVP supports one on-air title at a time.
-- **Multi-user concurrent editing** (operator A and operator B editing the same rundown at once). MVP assumes one operator.
-- **Per-user permissions / roles.** All authenticated users have full access.
-- **Audit log** of who did what.
-- **Tournament bracket auto-progression** (advance winners through rounds). Brackets are read-only in MVP titles.
-- **Asset upload via signed URLs** is documented as a "decide before build" item in [data-entities.md](./data-entities.md#upload-strategy--decide-before-build).
-- **Cross-instance broadcast bus** (Redis / Postgres LISTEN) for multi-server deployments. MVP assumes a single Edge region per rundown. See [rundowns.md](./rundowns.md#caveat-single-server-pubsub).
-
-## When MVP ships
-
-The MVP is complete when an operator can:
+An operator can:
 
 1. Sign in.
-2. Create a project (pick an overlay package via `project_label`), then open it.
-3. Add a Player, a Talent, a Team, and a Sponsor.
-4. Create an overlay (rundown), add three overlay components, configure them.
-5. Point OBS at `/air/<rundownId>`, run the show by clicking AIR / HIDE.
-
-Everything beyond that is post-MVP iteration.
+2. Enter a tournament from the gallery.
+3. Add players, teams, talents, sponsors.
+4. Build a rundown of overlays and configure them.
+5. Create a display, point OBS at `/air/<displayUuid>`, and run the show from the controller.

@@ -7,19 +7,19 @@ This folder is the single source of truth for ETS architecture, conventions, and
 1. [getting-started.md](./getting-started.md) — local setup: clone → install → env → run.
 2. [tech-stack.md](./tech-stack.md) — what's installed and why.
 3. [architecture.md](./architecture.md) — system overview, route map, data flow.
-4. [projects-system.md](./projects-system.md) — overlay packages (the `projects/` folders) vs. UI-created projects, and how to create each.
-5. [titles-system.md](./titles-system.md) — how to author a new overlay component (`index.tsx` + `model.ts` + `settings.ts`).
+4. [projects-system.md](./projects-system.md) — projects are **tournaments**; overlays are **global**, organized by discipline (category)/template; runtime theming.
+5. [titles-system.md](./titles-system.md) — how to author an overlay (`index.tsx` + `model.ts` widget schema + `settings.ts` + GSAP animations).
 
 ## Reference
 
-- [auth.md](./auth.md) — better-auth setup, login flow, protected routes.
-- [database.md](./database.md) — Drizzle schema, the `projects` (UUID) table, `project_id` isolation pattern, migrations vs project creation.
-- [data-entities.md](./data-entities.md) — CRUD entity reference (Players, Talents, Teams, Sponsors, Assets, Videos, Brackets, Project CSS) and the `extra` string-map.
-- [rundowns.md](./rundowns.md) — the **Overlays** section: rundown data model, the editor UI, the broadcast controller.
-- [preview-air.md](./preview-air.md) — the SSE contract for `/preview` and `/air`; OBS/vMix browser-source setup.
+- [auth.md](./auth.md) — username + password session cookie, login flow, guest users, protected routes.
+- [database.md](./database.md) — Drizzle schema, tournaments, the `project_id` isolation pattern, displays/settings, the rundown→overlay→data tree.
+- [data-entities.md](./data-entities.md) — CRUD entity reference (Players, Teams, Talents, Sponsors, Matches/Brackets, Tags, Themes, Assets, Videos).
+- [rundowns.md](./rundowns.md) — the **Overlays** section: rundown/overlay data model, the editor, and the live controller.
+- [preview-air.md](./preview-air.md) — the SSE contract for `/preview` and `/air` (display-addressed); OBS/vMix browser-source setup.
 - [state-management.md](./state-management.md) — Redux Toolkit + RTK Query patterns.
 
 ## Operations
 
-- [deployment.md](./deployment.md) — Netlify Production / Deploy Preview / Branch Deploys; Neon database branching; SSE on Edge Functions.
+- [deployment.md](./deployment.md) — Netlify Production / Deploy Preview / Branch Deploys; Neon database branching; SSE on Node functions.
 - [roadmap.md](./roadmap.md) — MVP scope and Beta items (MIDI, Bluetooth).

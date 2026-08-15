@@ -1,11 +1,11 @@
 # State Management
 
-ETS uses **Redux Toolkit** + **RTK Query** for the admin UI.
+ETS uses **Redux Toolkit** + **RTK Query**.
 
-- **RTK Query** handles all server cache (entities, rundowns, projects). It replaces SWR / React Query for our purposes.
-- **Redux Toolkit slices** hold ephemeral client UI state — the currently-selected title in the rundown editor, the controller's HIDE/AIR state, the "current project" context.
+- **RTK Query** handles all server cache. One slice per resource: `playersApi`, `teamsApi`, `talentsApi`, `sponsorsApi`, `matchesApi`/`bracketsApi`, `tagsApi`, `themesApi`, `assetsApi`, `videosApi`, `rundownsApi`, `rundownOverlaysApi`, `midiApi`, plus `userApi` (session/settings). Cache tags mirror the etalon: `User`, `Rundowns`, `Rundown`, `RundownOverlays`, `Midi`, `Seating`, and one per entity — every tag scoped by the tournament (`project_id`).
+- **Redux slices** hold ephemeral UI state (selected overlay in the editor) and the **live composition**: the etalon reduces the two SSE streams into `airsSlice` and `previewsSlice` (a `Map<overlayId, LiveOverlay>` reducer — `air`/`preview` set, `live_update` merge, `hide` delete, `hide_all` clear, `play_mixer` arm a stinger, `display_change` re-scope). The controller derives live/staged highlighting straight from those slices, so a reloaded tab recovers state for free.
 
-Broadcast pages (`/preview`, `/air`) do **not** use Redux at all. They subscribe directly to SSE; everything they need flows through the `data` prop.
+The broadcast output pages (`/preview`, `/air`) subscribe to the SSE stream and render a **set** of overlays filtered by `display_filter`; in the monolith they can render directly from the stream (a lean, Redux-free page) rather than through the store — the reducer logic is the same either way.
 
 ## Store setup
 
@@ -20,7 +20,7 @@ import { sponsorsApi } from './apis/sponsorsApi';
 import { assetsApi } from './apis/assetsApi';
 import { videosApi } from './apis/videosApi';
 import { bracketsApi } from './apis/bracketsApi';
-import { projectCssApi } from './apis/projectCssApi';
+import { themesApi } from './apis/themesApi';
 import { rundownsApi } from './apis/rundownsApi';
 import { editorSlice } from './slices/editorSlice';
 
@@ -33,7 +33,7 @@ export const store = configureStore({
     [assetsApi.reducerPath]: assetsApi.reducer,
     [videosApi.reducerPath]: videosApi.reducer,
     [bracketsApi.reducerPath]: bracketsApi.reducer,
-    [projectCssApi.reducerPath]: projectCssApi.reducer,
+    [themesApi.reducerPath]: themesApi.reducer,
     [rundownsApi.reducerPath]: rundownsApi.reducer,
     editor: editorSlice.reducer,
   },
@@ -45,7 +45,7 @@ export const store = configureStore({
     assetsApi.middleware,
     videosApi.middleware,
     bracketsApi.middleware,
-    projectCssApi.middleware,
+    themesApi.middleware,
     rundownsApi.middleware,
   ),
 });
@@ -57,12 +57,12 @@ export type AppDispatch = typeof store.dispatch;
 ```
 
 ```tsx
-// app/admin/layout.tsx (client portion)
+// app/(admin)/providers.tsx (client portion)
 'use client';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 
-export function AdminProviders({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return <Provider store={store}>{children}</Provider>;
 }
 ```
@@ -134,8 +134,8 @@ export const {
 
 Every tag includes the **project ID** in its identifier. This is critical: switching projects in the admin must not show cached players from the previous project.
 
-- `[{ type: 'Player', id: 'LIST:atl' }]` — the list of players in project `atl`.
-- `[{ type: 'Player', id: '<uuid>' }]` — a single player.
+- `[{ type: 'Player', id: 'LIST:42' }]` — the list of players in tournament `42`.
+- `[{ type: 'Player', id: '<id>' }]` — a single player.
 
 Mutations invalidate both the specific row and the project-scoped list. RTK Query auto-refetches subscribed queries.
 

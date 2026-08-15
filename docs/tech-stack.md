@@ -15,18 +15,19 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 | ORM | `drizzle-orm`, `drizzle-kit` | `^0.45.0`, `^0.31.0` |
 | Database driver | `@neondatabase/serverless` | `^0.10.0` |
 | Admin UI | `@mui/material`, `@emotion/react`, `@emotion/styled` | `^6.0.0` |
-| Title styling | `sass` (SCSS) | `^1.80.0` |
+| Overlay styling | `sass` (SCSS) | `^1.80.0` |
+| Overlay animation | `gsap` | `^3.11.0` |
 | State / data | `@reduxjs/toolkit`, `react-redux` | `^2.3.0`, `^9.1.0` |
 | Netlify adapter | `@netlify/plugin-nextjs` | `^5.0.0` |
 | Asset sync / codegen | `tsx` (dev only — Node built-ins do the copying and watching, no `fs-extra`/`chokidar`) | latest |
 
 ## Why each piece
 
-**Next.js (App Router).** One repo for frontend and backend. App Router gives per-route runtime selection (Node for most routes, **Edge** for SSE streams), Server Components for fast admin pages, and Route Handlers for the JSON API.
+**Next.js (App Router).** One repo for frontend and backend. App Router gives Server Components for fast admin pages, Route Handlers for the JSON API, and per-route runtime selection — everything, including the SSE stream, runs on **Node** so the in-process broadcast bus is shared across routes.
 
-**better-auth.** Email + password sign-in with sessions in the database. Pluggable to OAuth later without rewriting the login UI. Server-side session helpers integrate cleanly with both API routes and middleware.
+**better-auth.** Username + password sign-in with sessions in the database (session cookie, no client JWT). Supports the etalon's guest-user flow. Server-side session helpers integrate cleanly with API routes and the `proxy.ts` guard.
 
-**Zod.** The contract layer. Each title's `model.ts` Zod schema is reused for: (1) the admin form, (2) API mutation validation, (3) SSE payload validation. One schema, three call sites. See [titles-system.md](./titles-system.md).
+**Zod.** The contract layer. Each overlay's `model.ts` Zod schema (its widget schema) is reused for: (1) the admin form and (2) API validation of `data.widget`. The SSE render payload is assembled server-side and is **not** re-validated against the schema. See [titles-system.md](./titles-system.md).
 
 **React Hook Form (+ `@hookform/resolvers`).** All admin forms. Uncontrolled inputs keep re-renders minimal on the dense CRUD screens, and the `zodResolver` wires each entity's Zod schema straight into form validation — so the same schema that validates the API body also validates the form, no duplication.
 
@@ -34,21 +35,21 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 
 **MUI for admin.** Matches the dense, dark, professional aesthetic in the reference screenshots (cards, dialogs, dropdowns, table-heavy CRUD). Built-in dark theme, mature form components, no need to assemble shadcn primitives.
 
-**SCSS for title components.** Title components render into OBS/vMix browser sources where every kilobyte and every paint matters. SCSS compiles to plain CSS at build time — **no runtime CSS-in-JS**, no utility-class runtime. Each title imports a co-located `.module.scss` (or `.scss`); brand colors and fonts come from each project's `project.css` (`@font-face` + `:root` CSS variables), which the SCSS consumes via `var(--…)`. Re-skinning a project is a CSS-variable edit, not a title edit. **MUI is not imported inside title components.** Use `font-display: block` (not `swap`) in broadcast contexts.
+**SCSS + GSAP for overlay components.** Overlays render into OBS/vMix browser sources where every kilobyte and paint matters. SCSS compiles to plain CSS at build time — no runtime CSS-in-JS. Each overlay imports a co-located `.module.scss`; brand colors and fonts come from the **active tournament theme**, written to `:root` as CSS variables at runtime ([projects-system.md](./projects-system.md#theming)), consumed via `var(--…)`. Re-skinning is a theme change, not a code edit. Overlays animate in/out with **GSAP** timelines and composite video **stinger mixers**. **MUI is not imported inside overlays.** `font-display: block` (not `swap`) in broadcast.
 
-**Redux Toolkit + RTK Query.** RTK Query is the server-cache layer (replaces SWR/React Query for our use case). One API slice per entity (`playersApi`, `teamsApi`, …) gives us auto-generated hooks, optimistic updates, and tag-based cache invalidation. A thin Redux slice holds ephemeral UI state (selected title, controller HIDE/AIR state). See [state-management.md](./state-management.md).
+**Redux Toolkit + RTK Query.** RTK Query is the server-cache layer. One slice per entity gives auto-generated hooks and tag-based invalidation. Redux slices also reduce the two SSE streams into the live composition (`airsSlice`/`previewsSlice`). See [state-management.md](./state-management.md).
 
-**Server-Sent Events on Edge runtime.** One-way push, simple HTTP, works through Netlify's CDN. WebSockets would add complexity (bidirectional channel, sticky sessions on Netlify) that we don't need. Edge runtime is required because **Netlify Functions cap at 10s and SSE streams are long-lived**.
+**Server-Sent Events for the live composition.** One-way push, simple HTTP, works through CDNs. The stream route runs on Node so it shares the in-process bus with the Node publisher routes (the Edge/Node split otherwise breaks in-process pub/sub — see [preview-air.md](./preview-air.md#caveat-the-edgenode-runtime-split)). **WebSockets** are used for the two-way subsystems that need them — the **timer** and **heart-rate** streams.
 
 **Netlify deployment.** Branch-based environments (Production / Deploy Preview / Branch Deploys) with per-context environment variables map naturally onto Neon's database branching. The `@netlify/plugin-nextjs` adapter routes Next.js Edge functions to Netlify Edge Functions automatically. See [deployment.md](./deployment.md).
 
 ## What we deliberately did NOT use
 
-- **WebSockets** — overkill; see SSE rationale above.
-- **Tailwind** — SCSS compiles to plain CSS with zero runtime and keeps title styling decoupled from a utility config; we don't need atomic utilities for a small set of title components.
+- **WebSockets for the composition** — the preview/air composition is one-way, so SSE carries it. WebSockets are reserved for the genuinely bidirectional timer and heart-rate subsystems.
+- **Tailwind** — SCSS compiles to plain CSS with zero runtime and keeps overlay styling decoupled from a utility config.
 - **shadcn/ui** — MUI already gives us themed components.
-- **Prisma** — Drizzle is a better fit for the serverless driver and Edge readiness.
-- **next-auth / Auth.js** — better-auth is simpler for the email-only MVP.
+- **Prisma** — Drizzle is a better fit for the serverless driver.
+- **next-auth / Auth.js** — better-auth is simpler and supports the username + guest-user model.
 - **GraphQL** — REST under `/api/projects/[projectId]/...` is plenty for CRUD.
 
 ## Install once
@@ -61,6 +62,7 @@ npm install drizzle-orm @neondatabase/serverless
 npm install --save-dev drizzle-kit
 npm install @mui/material @emotion/react @emotion/styled
 npm install --save-dev sass
+npm install gsap
 npm install @reduxjs/toolkit react-redux
 npm install --save-dev @netlify/plugin-nextjs tsx
 ```
