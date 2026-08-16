@@ -1,0 +1,17 @@
+// Absolute on the transparent 1920x1080 canvas; theme CSS variables only.
+.root {
+  position: fixed;
+  left: 120px;
+  bottom: 160px;
+}
+
+.text {
+  display: inline-block;
+  font-family: var(--font-display, sans-serif);
+  font-display: block;
+  font-size: 64px;
+  line-height: 1.1;
+  color: var(--color-primary, #ffffff);
+  background: var(--color-bg-accent, rgba(0, 0, 0, 0.6));
+  padding: 12px 28px;
+}
