@@ -11,6 +11,7 @@ import { bracketsApi } from './apis/bracketsApi'
 import { projectsApi } from './apis/projectsApi'
 import { rundownsApi } from './apis/rundownsApi'
 import { tagsApi } from './apis/tagsApi'
+import { themesApi } from './apis/themesApi'
 
 const rootReducer = combineReducers({
   editor,
@@ -24,6 +25,7 @@ const rootReducer = combineReducers({
   [projectsApi.reducerPath]: projectsApi.reducer,
   [rundownsApi.reducerPath]: rundownsApi.reducer,
   [tagsApi.reducerPath]: tagsApi.reducer,
+  [themesApi.reducerPath]: themesApi.reducer,
 })
 
 const entityMiddleware = [
@@ -37,6 +39,7 @@ const entityMiddleware = [
   projectsApi.middleware,
   rundownsApi.middleware,
   tagsApi.middleware,
+  themesApi.middleware,
 ] as any[]
 
 export const store = configureStore({
