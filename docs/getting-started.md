@@ -35,7 +35,7 @@ BETTER_AUTH_SECRET="<random 32-byte hex — generate with `openssl rand -hex 32`
 BETTER_AUTH_URL="http://localhost:3000"
 ```
 
-See [auth.md](./auth.md) for what each variable controls and [deployment.md](./deployment.md) for how these map to Netlify contexts in production.
+See [auth.md](./auth.md) for what each variable controls and [deployment.md](./deployment.md) for how these are set on the production server.
 
 ## 3. Initialize the database
 
@@ -101,12 +101,6 @@ Now taking an overlay to air in the controller will show it in OBS. See [preview
 - **`/air/<displayUuid>` shows a blank page in OBS** — open the URL in a regular browser first to check for errors. The most common cause is a display UUID that doesn't exist, or no overlay currently on air for it. See [preview-air.md](./preview-air.md).
 - **Fonts or colors look wrong in OBS** — the tournament has no active theme, so its CSS variables aren't set. Activate a theme. See [projects-system.md](./projects-system.md#theming).
 
-## Working on asset-related features
+## Working on media/upload features
 
-Any work touching Project Assets, or any entity with an image/video field (Players, Talents, Teams, Sponsors), needs Netlify Blobs, which only works under `netlify dev` — not plain `next dev`. Run:
-
-```bash
-npx netlify dev
-```
-
-instead of `npm run dev` when working in this area. Everything else in the app works the same either way.
+Uploaded images and videos (player photos, team/sponsor logos, tournament art, overlay stinger/background clips) are stored in **object storage** (S3-compatible — Cloudflare R2 / Hetzner Object Storage) or on a local media volume in production; the DB holds only the URL. See [deployment.md](./deployment.md#6-media-storage). For local dev, point the app at a dev bucket (or a local MinIO / a local `public/media` folder) via the same env vars you'll use in production.

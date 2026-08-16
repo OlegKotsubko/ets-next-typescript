@@ -21,5 +21,5 @@ This folder is the single source of truth for ETS architecture, conventions, and
 
 ## Operations
 
-- [deployment.md](./deployment.md) — Netlify Production / Deploy Preview / Branch Deploys; Neon database branching; SSE on Node functions.
+- [deployment.md](./deployment.md) — a single always-on Node server on Hetzner behind Caddy; Neon (or self-hosted) Postgres; object-storage media; the single-instance SSE/bus model.
 - [roadmap.md](./roadmap.md) — MVP scope and Beta items (MIDI, Bluetooth).

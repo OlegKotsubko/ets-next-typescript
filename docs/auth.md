@@ -10,12 +10,12 @@ ETS logs operators in with **username + password**, returning a **session cookie
 
 ```env
 BETTER_AUTH_SECRET="<32-byte hex string>"          # openssl rand -hex 32
-BETTER_AUTH_URL="http://localhost:3000"           # dev
-# BETTER_AUTH_URL="https://yourapp.netlify.app"   # production
+BETTER_AUTH_URL="http://localhost:3000"            # dev
+# BETTER_AUTH_URL="https://ets.your-domain.tv"     # production
 DATABASE_URL="postgresql://..."
 ```
 
-`BETTER_AUTH_URL` must match the origin the browser sees. In Netlify Deploy Previews the URL is dynamic — use `process.env.DEPLOY_PRIME_URL` to construct it. See [deployment.md](./deployment.md).
+`BETTER_AUTH_URL` must match the public origin the browser sees (your server's domain) — otherwise login cookies are dropped. On the server it lives in the systemd env file. See [deployment.md](./deployment.md#2-environment-variables).
 
 ## Server setup
 
@@ -234,7 +234,7 @@ The session returned by `auth.api.getSession` contains `user.id`, `user.username
 ## Troubleshooting
 
 - **Login succeeds in the network tab but `/projects` redirects back to `/login`** — `BETTER_AUTH_URL` doesn't match the origin. Cookies are dropped because the cookie domain doesn't match.
-- **`BETTER_AUTH_SECRET` errors in production but works locally** — the env var didn't propagate to the Netlify context. Verify it's set for **Production** (not just **Deploy Previews**) in Netlify's environment-variables UI.
+- **`BETTER_AUTH_SECRET` errors in production but works locally** — the variable isn't in the server's env file (`/etc/ets/ets.env`), or the service wasn't restarted after adding it. Set it and `sudo systemctl restart ets`.
 - **Sign-up returns 4xx / `SIGNUP_DISABLED`** — working as designed (`disableSignUp`). Use `scripts/create-user.ts`.
 - **`proxy.ts` never runs** — you're on Next 15.x, which silently ignores it. The app requires `next@^16`.
 - **Top-level await fails in a script** — the repo has no `"type": "module"`, so tsx emits CJS. Wrap in an async `main()`.

@@ -18,8 +18,7 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 | Overlay styling | `sass` (SCSS) | `^1.80.0` |
 | Overlay animation | `gsap` | `^3.11.0` |
 | State / data | `@reduxjs/toolkit`, `react-redux` | `^2.3.0`, `^9.1.0` |
-| Netlify adapter | `@netlify/plugin-nextjs` | `^5.0.0` |
-| Asset sync / codegen | `tsx` (dev only — Node built-ins do the copying and watching, no `fs-extra`/`chokidar`) | latest |
+| Codegen (dev) | `tsx` (runs the overlay-registry codegen) | latest |
 
 ## Why each piece
 
@@ -41,7 +40,7 @@ Pinned in `package.json`. The versions below are minimums known to work; bump de
 
 **Server-Sent Events for the live composition.** One-way push, simple HTTP, works through CDNs. The stream route runs on Node so it shares the in-process bus with the Node publisher routes (the Edge/Node split otherwise breaks in-process pub/sub — see [preview-air.md](./preview-air.md#caveat-the-edgenode-runtime-split)). **WebSockets** are used for the two-way subsystems that need them — the **timer** and **heart-rate** streams.
 
-**Netlify deployment.** Branch-based environments (Production / Deploy Preview / Branch Deploys) with per-context environment variables map naturally onto Neon's database branching. The `@netlify/plugin-nextjs` adapter routes Next.js Edge functions to Netlify Edge Functions automatically. See [deployment.md](./deployment.md).
+**Single always-on Node server (Hetzner).** The broadcast bus is in-process pub/sub, so the publisher and the SSE stream must share one process — a serverless platform (Netlify/Vercel) splits them and breaks it. We deploy `next start` as one long-running Node process behind **Caddy** (auto-TLS + reverse proxy), with Neon (or self-hosted) Postgres and object-storage media. See [deployment.md](./deployment.md).
 
 ## What we deliberately did NOT use
 
@@ -64,5 +63,5 @@ npm install @mui/material @emotion/react @emotion/styled
 npm install --save-dev sass
 npm install gsap
 npm install @reduxjs/toolkit react-redux
-npm install --save-dev @netlify/plugin-nextjs tsx
+npm install --save-dev tsx
 ```

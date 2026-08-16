@@ -12,7 +12,7 @@ The core is everything described in the rest of the docs:
 - **Controller.** Preview → air switching with a layered composition, per-overlay hide / hide-air, live-update (only `can_live_update` fields), thread-widget actions, and the full-screen-clears-air rule. See [rundowns.md](./rundowns.md#the-controller-live).
 - **Displays & broadcast.** Output addressed by **display UUID**; `/preview/[uuid]` and `/air/[uuid]` render a set of overlays on a transparent 1920×1080 canvas with GSAP animations and stinger mixers, driven by SSE; `display_filter` routes one tournament to many displays. See [preview-air.md](./preview-air.md).
 - **Theming.** The active tournament theme's colors become `:root` CSS variables at runtime. See [projects-system.md](./projects-system.md#theming).
-- **Deployment.** Netlify with Neon database branching. See [deployment.md](./deployment.md).
+- **Deployment.** A single always-on Node server (Hetzner) behind Caddy, with Neon (or self-hosted) Postgres and object-storage media. See [deployment.md](./deployment.md).
 
 ## Roadmap — real subsystems, staged for a later pass
 

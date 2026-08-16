@@ -32,7 +32,7 @@ There is no `packages:generate`, `assets:sync`, or `projects:sync` — overlays 
 
 ## Tech stack
 
-Next.js 16 (App Router) · React 19 · TypeScript · better-auth (**username** + password, session cookie) · Zod · React Hook Form (`zodResolver`) · Drizzle ORM + Neon Postgres (`@neondatabase/serverless` HTTP driver) · MUI (admin) · SCSS + **GSAP** (overlays) · Redux Toolkit + RTK Query · Netlify. Full rationale: `docs/tech-stack.md`.
+Next.js 16 (App Router) · React 19 · TypeScript · better-auth (**username** + password, session cookie) · Zod · React Hook Form (`zodResolver`) · Drizzle ORM + Neon Postgres (`@neondatabase/serverless` HTTP driver) · MUI (admin) · SCSS + **GSAP** (overlays) · Redux Toolkit + RTK Query · deployed as a **single always-on Node server (Hetzner + Caddy)** — not serverless, so the in-process bus works. Full rationale: `docs/tech-stack.md`.
 
 ## Architecture: the load-bearing decisions
 
@@ -46,7 +46,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · better-auth (**username** +
 
 5. **SSE over an in-process event bus; displays are the broadcast unit.** The controller publishes `air`/`preview`/`hide`/`hide_all`/`live_update`/`play_mixer`/`display_change` events to an in-memory pub/sub keyed by `(displayUuid, channel)` (`channel ∈ preview|air`); on-air state is transient and never persisted, with a per-key snapshot for reconnect replay. A display renders a **set** of overlays, sorted by `layer` (1–7), filtered by `display_filter` (one tournament → many displays). See `docs/preview-air.md`, `docs/rundowns.md`.
 
-6. **Node runtime for the SSE route (not Edge).** The stream route runs on Node so it shares the in-process bus with the Node publisher routes — an Edge SSE route can't see a Node `publish()` (separate bundles/module state), which breaks the bus even in `next dev`. The Netlify ~10s Node-function reconnect churn is softened by the client holding its set across EventSource reconnects. See `docs/preview-air.md` "Caveat: the Edge/Node runtime split".
+6. **Node runtime for the SSE route (not Edge).** The stream route runs on Node so it shares the in-process bus with the Node publisher routes — an Edge SSE route can't see a Node `publish()` (separate bundles/module state), which breaks the bus even in `next dev`. On an always-on server (the deploy target) the stream stays open indefinitely; on serverless the ~10s cap would force reconnects (softened by the client holding its set across EventSource reconnects). See `docs/preview-air.md` "Caveat: the Edge/Node runtime split".
 
 7. **Split UI: MUI for admin, SCSS + GSAP for overlays.** Overlays use `.module.scss` + CSS variables only (no MUI, no inline hex). Colors/fonts come from the **active tournament theme**, written to `:root` at runtime (`docs/projects-system.md` theming) — re-skinning is a theme change, not a code edit. Overlays animate with GSAP and composite video stinger mixers. `font-display: block` in broadcast.
 

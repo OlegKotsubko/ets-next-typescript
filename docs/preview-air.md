@@ -66,7 +66,7 @@ The bus lives in process memory and only works when publisher and subscriber sha
 
 ### Caveat: the Edge/Node runtime split
 
-If the SSE stream route is `runtime = 'edge'` while the publisher routes are Node, they compile to **separate bundles with separate module state** — a Node `publish()` never reaches the Edge subscriber, even in `next dev`. Resolve by keeping both in one runtime (make the SSE route Node — the SSE route is public and Neon's HTTP driver runs on Node), accepting Netlify's ~10s Node-function reconnect churn (softened by the client holding its set across reconnects), or introducing the broker above. This must be settled before wiring the Node publisher.
+If the SSE stream route is `runtime = 'edge'` while the publisher routes are Node, they compile to **separate bundles with separate module state** — a Node `publish()` never reaches the Edge subscriber, even in `next dev`. Resolve by keeping both in one runtime — make the SSE route **Node** (it's public, and Neon's HTTP driver runs on Node), which is exactly what an always-on-server deploy wants (no serverless ~10s cap; see [deployment.md](./deployment.md)). On serverless you'd instead accept ~10s reconnect churn (softened by the client holding its set across reconnects) or introduce the broker above. This must be settled before wiring the Node publisher.
 
 ## OBS / vMix setup
 

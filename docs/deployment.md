@@ -1,140 +1,156 @@
 # Deployment
 
-ETS deploys to **Netlify**, with **Neon** providing the Postgres database. The architecture maps cleanly onto Netlify's three deploy contexts.
+ETS deploys as a **single always-on Node server** on a **Hetzner** VPS, behind **Caddy** (TLS + reverse proxy), with Postgres (**Neon**, or self-hosted) and **object storage** for uploaded media.
 
-## Environments at a glance
+> **Why an always-on server, not serverless?** The broadcast bus is **in-process pub/sub** — the `take`/`publish` route and the SSE `/air` stream must run in the **same process** to share memory. Serverless (Netlify/Vercel) splits them across invocations/instances, so published events never reach the stream, and the ~10s function cap truncates SSE. One persistent Node process is the happy path. See [preview-air.md](./preview-air.md#the-in-process-bus).
 
-| Environment | Netlify context | Triggered by | Database |
-|---|---|---|---|
-| **Local dev** | n/a — `npm run dev` | running on your machine | Neon dev branch (or your own local Postgres) |
-| **Deploy Preview** | `deploy-preview` | every PR opened against `main` | Neon dev branch (or auto-branch — see below) |
-| **Branch Deploy** | `branch-deploy` | push to `develop`, `staging`, etc. | Neon dev branch |
-| **Production** | `production` | push to `main` | Neon prod branch |
-
-## 1. Neon database branching
-
-Neon supports cheap, near-instant database branches. One project, multiple branches.
-
-Recommended setup:
-
-- **`main` branch** — production database. Holds real broadcast data.
-- **`dev` branch** — development database. Reset freely.
-
-Optional: enable the **Neon ↔ Netlify integration**, which automatically creates an ephemeral Neon branch per Netlify Deploy Preview and tears it down when the PR closes. Each PR then gets its own isolated database — no cross-contamination between concurrent reviews.
-
-Connection strings (copy from the Neon dashboard):
+## Topology
 
 ```
-prod:   postgresql://user:pass@ep-prod-xxx.neon.tech/main?sslmode=require
-dev:    postgresql://user:pass@ep-dev-xxx.neon.tech/main?sslmode=require
+        OBS / vMix ──HTTPS/SSE──┐
+        operator browser ───────┤
+                                ▼
+                      ┌───────────────────┐   :443
+                      │   Caddy (TLS +     │
+                      │   reverse proxy)   │
+                      └─────────┬─────────┘   127.0.0.1:3000
+                                ▼
+                      ┌───────────────────┐
+                      │  Node: next start │  ← one process; in-process bus
+                      │  (systemd service)│
+                      └───┬───────────┬───┘
+                          │           │
+                   Postgres          Object storage
+                (Neon / local)     (R2 / Hetzner OS)  ← images & stinger videos
 ```
 
-## 2. Netlify environment variables
+Single instance is deliberate — the bus is single-process (see [§10](#10-single-instance-caveat)).
 
-In **Site settings → Environment variables** on Netlify, set variables per context:
+## 1. Provision the server
 
-| Variable | Production | Deploy Preview | Branch Deploys |
-|---|---|---|---|
-| `DATABASE_URL` | prod Neon URL | dev Neon URL | dev Neon URL |
-| `BETTER_AUTH_SECRET` | a stable 32-byte hex value (different from dev) | a separate 32-byte hex | same as deploy preview |
-| `BETTER_AUTH_URL` | `https://yourapp.netlify.app` | `$DEPLOY_PRIME_URL` (Netlify variable) | `$DEPLOY_PRIME_URL` |
-| `NODE_ENV` | `production` (Netlify sets this automatically) | `production` | `production` |
+- **Hetzner Cloud**, Ubuntu 24.04 LTS. A **CPX21/CPX31** (2–4 vCPU, 4–8 GB) is a sane start; broadcast serves video, so give it headroom (and put media behind a CDN — [§6](#6-media-storage)).
+- Create a non-root sudo user, add your SSH key, disable password login.
+- Firewall (Hetzner Cloud Firewall or `ufw`): allow **22, 80, 443** only.
+- Install **Node 20+** (`nodesource` or `nvm`), `git`, and Caddy.
 
-Notes:
+## 2. Environment variables
 
-- `BETTER_AUTH_URL` for previews uses `$DEPLOY_PRIME_URL`, which Netlify expands to the deploy's unique URL (e.g., `https://deploy-preview-42--yourapp.netlify.app`).
-- Don't reuse `BETTER_AUTH_SECRET` between prod and dev. Rotating prod's secret would otherwise invalidate every dev session too.
-- Local dev reads from `.env.local` (git-ignored), which Netlify never sees.
+Keep these in `/etc/ets/ets.env` (root-owned, `chmod 600`, **never committed**) so systemd can load them:
 
-## 3. `netlify.toml`
-
-Commit this at the repo root:
-
-```toml
-[build]
-  command = "npm run build"
-  publish = ".next"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-[context.production.environment]
-  NODE_ENV = "production"
-
-[context.deploy-preview.environment]
-  NODE_ENV = "production"
-
-[context.branch-deploy.environment]
-  NODE_ENV = "production"
+```env
+DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/main?sslmode=require"
+BETTER_AUTH_URL="https://ets.your-domain.tv"
+BETTER_AUTH_SECRET="<32-byte hex — openssl rand -hex 32>"
+# object storage (if using R2/S3 for media)
+S3_ENDPOINT="https://<account>.r2.cloudflarestorage.com"
+S3_BUCKET="ets-media"
+S3_ACCESS_KEY_ID="..."
+S3_SECRET_ACCESS_KEY="..."
+NODE_ENV="production"
 ```
 
-`@netlify/plugin-nextjs` is the official adapter. It:
+- `BETTER_AUTH_URL` **must** match the public origin the browser sees, or login cookies are dropped.
+- Use a different `BETTER_AUTH_SECRET` from dev.
 
-- Routes Next.js API routes and Server Components to **Netlify Functions** (Node runtime).
-- Serves static files from `.next/static` and `public/` via the CDN.
-
-No extra configuration needed — the plugin detects the App Router automatically.
-
-## 4. SSE runs on Node (not Edge)
-
-**This is the most important deployment-specific detail.**
-
-The SSE stream route runs on the **default Node runtime**, the same runtime as the publisher routes (`take`/`preview`/`hide`), so they share the **in-process broadcast bus**. An Edge SSE route can't see a Node `publish()` — Edge and Node compile to separate bundles with separate module state — which breaks the bus even in `next dev`. See [preview-air.md](./preview-air.md#caveat-the-edgenode-runtime-split).
-
-The trade-off is Netlify's Node-function timeout (**~10s**, 26s on Pro): a long SSE stream is truncated and the client reconnects. This is acceptable because the client **holds its rendered set across `EventSource` auto-reconnects** and the reconnect re-hydrates from the current snapshot, so it's visually seamless. A always-on deployment (a single Node server) or a cross-instance broker removes the churn — see the single-server caveat.
-
-Node routes also need Node APIs anyway:
-- `better-auth` session helpers (Node-only in some flows).
-- `@neondatabase/serverless` (HTTP driver; runs on Node).
-
-## 5. Build pipeline
-
-`npm run build` on Netlify executes (in order):
-
-1. `prebuild` script:
-   - `npm run titles:generate` — regenerates the overlay registry (static imports).
-2. `next build` — produces `.next/`.
-3. `@netlify/plugin-nextjs` packages the output for Netlify Functions.
-
-The `predev` hook runs the same registry codegen for local development. Overlays are global (organized by discipline/category — see [projects-system.md](./projects-system.md)); there is no per-tournament package to sync.
-
-## 6. Migrations workflow
-
-Migrations are **never** run as part of `next build`. They run out-of-band against the appropriate `DATABASE_URL`.
-
-### Dev migrations
+## 3. Build & run under systemd
 
 ```bash
-# 1. Edit db/schema.ts
-# 2. Generate the migration
+sudo mkdir -p /srv/ets && sudo chown $USER /srv/ets
+git clone <repo-url> /srv/ets && cd /srv/ets
+npm ci
+npm run build            # prebuild runs titles:generate (overlay registry)
+```
+
+`/etc/systemd/system/ets.service`:
+
+```ini
+[Unit]
+Description=ETS (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=ets
+WorkingDirectory=/srv/ets
+EnvironmentFile=/etc/ets/ets.env
+# bind to loopback; Caddy terminates TLS and proxies in
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now ets
+journalctl -u ets -f      # follow logs
+```
+
+## 4. Reverse proxy + TLS (Caddy)
+
+Caddy gives automatic HTTPS and streams SSE correctly. `/etc/caddy/Caddyfile`:
+
+```caddyfile
+ets.your-domain.tv {
+    encode zstd gzip
+    # Do NOT buffer/compress the SSE stream — OBS would freeze on a "connected" but silent feed
+    @sse path /api/broadcast/*
+    reverse_proxy @sse 127.0.0.1:3000 {
+        flush_interval -1          # stream immediately, no buffering
+    }
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+The critical detail is **`flush_interval -1` on `/api/broadcast/*`** (and keeping compression off it). On **nginx** the equivalents are `proxy_buffering off; proxy_cache off; gzip off;` plus `proxy_http_version 1.1;` and a long `proxy_read_timeout` on that location.
+
+The SSE route also sends a **15s heartbeat**, which keeps any idle-timeout from closing the stream.
+
+## 5. Database
+
+**Recommended: keep Neon.** The Neon HTTP driver works fine from a normal server (it's just HTTPS) and you keep Neon's branching/PITR. Point `DATABASE_URL` at your Neon prod branch.
+
+> **If you self-host Postgres** (on the box or another Hetzner server): the app uses **`@neondatabase/serverless`**, which speaks Neon's HTTP protocol — it will **not** connect to a stock Postgres. To self-host you must either switch the driver to `drizzle-orm/node-postgres` + `pg` (a small `db/index.ts` change), or run a Neon-compatible proxy. Easiest is to stay on Neon.
+
+## 6. Media storage
+
+The DB stores only **URLs**; the binaries (player photos, team/sponsor logos, tournament art, and the large overlay **stinger/mixer/background videos**) need a home. Two good options:
+
+- **Object storage (recommended)** — an S3-compatible bucket: **Cloudflare R2** (zero egress + built-in CDN, great for videos OBS pulls) or **Hetzner Object Storage** (same-DC, no cross-provider egress). Upload via the API / a signed PUT; store the object URL in the row.
+- **Local disk on a Hetzner Volume (simplest)** — attach a **Volume** (durable, survives rebuilds), mount at `/srv/ets-media`, write uploads there, and serve it from Caddy:
+  ```caddyfile
+  handle_path /media/* {
+      root * /srv/ets-media
+      file_server
+      header Cache-Control "public, max-age=31536000, immutable"
+  }
+  ```
+  Works because the server is persistent (unlike serverless FS). Single-instance only; back it up.
+
+Either way: the `/air` and `/preview` pages (loaded by OBS) fetch these URLs, so media must be **publicly readable**, and if it's on a different origin than the app, set **CORS** (`Access-Control-Allow-Origin`). Put a **CDN** in front of the videos if OBS runs remotely — a large stinger pulled live over a slow link stutters on air.
+
+## 7. Migrations
+
+Migrations are **never** part of the build. Run them out-of-band against the prod `DATABASE_URL`, **before** restarting into code that needs the new schema (expand-and-contract: the migration stays backward-compatible with the running old code).
+
+```bash
+# dev: edit db/schema.ts, then
 npm run db:generate
+DATABASE_URL="<dev url>" npm run db:migrate
+git add db/schema.ts db/migrations && git commit -m "db: <change>"
 
-# 3. Apply against the dev branch
-DATABASE_URL="postgresql://...@ep-dev-xxx.neon.tech/main?sslmode=require" \
-  npm run db:migrate
-
-# 4. Commit the generated SQL in db/migrations/
-git add db/schema.ts db/migrations
-git commit -m "db: add commentators table"
+# prod: from a dev machine or CI (or on the server before restart)
+DATABASE_URL="<prod url>" npm run db:migrate
 ```
 
-### Prod migrations
-
-```bash
-# After the PR is merged to main:
-DATABASE_URL="postgresql://...@ep-prod-xxx.neon.tech/main?sslmode=require" \
-  npm run db:migrate
-```
-
-Run this from a developer's machine, or — preferably — a GitHub Actions workflow gated on push to `main`. Example workflow:
+CI example (gate on schema changes to `main`):
 
 ```yaml
 # .github/workflows/migrate-prod.yml
 name: Migrate production database
 on:
-  push:
-    branches: [main]
-    paths: ['db/migrations/**', 'db/schema.ts']
+  push: { branches: [main], paths: ['db/migrations/**', 'db/schema.ts'] }
 jobs:
   migrate:
     runs-on: ubuntu-latest
@@ -144,57 +160,51 @@ jobs:
         with: { node-version: '20' }
       - run: npm ci
       - run: npm run db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        env: { DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }} }
 ```
 
-> Migrations and Netlify deploys are decoupled. If a migration is required for new code, **apply the migration first** (it should always be backward-compatible with the still-running old code), then merge the PR that ships the new code. See "expand and contract" migration patterns for the general approach.
+## 8. Deploying a new version
 
-## 7. Local development
+A minimal `deploy.sh` on the server (trigger it over SSH from CI, or a git webhook):
 
-Local dev does not touch Netlify at all. The `.env.local` file in your working directory holds:
+```bash
+cd /srv/ets
+git pull --ff-only
+npm ci
+npm run build            # titles:generate + next build
+# apply any pending migration here if the schema changed (see §7)
+sudo systemctl restart ets
+```
+
+`systemctl restart` is a ~1–2s blip; OBS/operator SSE clients auto-reconnect and re-hydrate from the snapshot, so it's seamless **between** shows. Don't redeploy mid-broadcast. True zero-downtime would need two processes + a Caddy swap, but that reintroduces the split-process bus problem during the swap — not worth it for a single-operator tool.
+
+## 9. Local development
+
+Local dev is unchanged and needs no server. `.env.local` (git-ignored):
 
 ```env
 DATABASE_URL="postgresql://...@ep-dev-xxx.neon.tech/main?sslmode=require"
-BETTER_AUTH_SECRET="<your dev secret>"
+BETTER_AUTH_SECRET="<dev secret>"
 BETTER_AUTH_URL="http://localhost:3000"
 ```
 
-`.env.local` is git-ignored. Don't commit it.
+Run `npm run dev` (one process → the bus works exactly as in prod).
 
-Run with `npm run dev`. The `predev` script syncs projects and starts the asset watcher.
+## 10. Single-instance caveat
 
-## 8. Custom domain
+One Node process = the in-process bus works. **Do not run two app servers behind a load balancer** — a `take` on server A won't reach an OBS source connected to server B. Horizontal scaling would require a cross-instance broker (**Redis pub/sub** or **Postgres `LISTEN/NOTIFY`**) that both the publisher and the SSE route talk to instead of process memory. Out of scope for a single-operator setup; revisit only if you must scale out. See [preview-air.md](./preview-air.md#caveat-single-server-pubsub).
 
-Netlify's default domain (`yourapp.netlify.app`) works for testing. For production:
+## 11. Observability & backups
 
-1. Site settings → **Domain management** → **Add custom domain**.
-2. Set the DNS as Netlify instructs (CNAME or NS records).
-3. Update `BETTER_AUTH_URL` for the Production context to the new domain.
-4. Redeploy (or trigger a deploy from the Netlify UI).
-
-> If you change `BETTER_AUTH_URL` after users have signed in, those sessions become invalid (cookies are bound to the prior origin). Plan the cutover during a low-traffic window.
-
-## 9. Observability
-
-The MVP relies on Netlify's built-in logs:
-
-- **Functions** tab — invocation count and errors for each Route Handler.
-- **Functions** tab — SSE stream and API invocations, warning/error logs.
-- **Deploy log** — surfaces `prebuild` failures (most often: `titles:generate` failing to resolve an overlay).
-
-For richer telemetry later (Sentry, OpenTelemetry, Vercel Analytics equivalents), add after MVP.
-
-## 10. Cost notes
-
-- **Netlify Free tier** is generous for an MVP: 125k Function invocations/month. On Node functions, SSE connections are capped (~10s) and reconnect; each reconnect is another short invocation (the client re-hydrates seamlessly).
-- **Neon Free tier** includes 0.5 GB storage and one project with multiple branches. For an MVP this is enough; for production budget ~$19/month on Neon's Pro tier.
-- The **Neon ↔ Netlify integration** counts auto-branches against your Neon quota — disable if you hit limits.
+- **Logs:** `journalctl -u ets -f` (app) and Caddy's access log. Add **Sentry** later for error tracking.
+- **Health:** point an uptime check at `/login` (fast, public) or add a lightweight `/api/health` route.
+- **DB backups:** Neon has PITR + branching; self-hosted → a `pg_dump` cron off-box.
+- **Media backups:** object storage is already durable; a Hetzner Volume → periodic snapshot.
 
 ## Common pitfalls
 
-- **Forgot to set `BETTER_AUTH_URL` for Deploy Previews.** Login on a preview URL succeeds but immediately redirects back to `/login`. Fix: set the variable to `$DEPLOY_PRIME_URL` for the `deploy-preview` context.
-- **SSE connection drops after ~10s in production.** Expected on Netlify Node functions — the client auto-reconnects and re-hydrates from the snapshot. For churn-free streaming use an always-on Node host or a cross-instance broker. See [preview-air.md](./preview-air.md#the-in-process-bus).
-- **`titles:generate` failed during the build.** An overlay folder is missing one of its required files, or an import doesn't resolve. Check the `prebuild` log.
-- **Forgot to migrate the prod DB before merging.** Code expects new columns that don't exist. The site returns 500s. Fix: apply the migration manually, then redeploy. **Always migrate before you ship code that depends on the new schema.**
-- **`@netlify/plugin-nextjs` version mismatch.** Upgrade to `^5.0.0`.
+- **OBS shows "connected" but the overlay never appears / never updates.** The proxy is buffering or compressing the SSE stream. Set `flush_interval -1` (Caddy) / `proxy_buffering off` (nginx) on `/api/broadcast/*` and keep compression off it.
+- **Self-hosted Postgres won't connect.** The app ships the Neon **HTTP** driver — it only speaks to Neon. Stay on Neon, or switch `db/index.ts` to `node-postgres`.
+- **Login redirect loop after going live.** `BETTER_AUTH_URL` doesn't match the public origin; cookies are dropped. Set it to your real `https://` domain and restart.
+- **500s after a deploy.** Code expects a column the DB doesn't have — you skipped the migration. Migrate **before** restarting (§7).
+- **`.env`/`ets.env` committed.** Rotate `BETTER_AUTH_SECRET` and DB credentials immediately; keep secrets out of git.
