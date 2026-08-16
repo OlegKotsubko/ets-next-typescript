@@ -1,6 +1,6 @@
 import {
   pgEnum, pgTable, serial, integer, text, date, timestamp, jsonb, boolean,
-  index, uniqueIndex, primaryKey,
+  doublePrecision, index, uniqueIndex, primaryKey,
 } from 'drizzle-orm/pg-core'
 
 // --- better-auth core tables (drizzleAdapter usePlural: true) ---------------
@@ -250,3 +250,33 @@ export const rundowns = pgTable('rundowns', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [index('rundowns_project_idx').on(t.projectId)])
+
+// A placed overlay/title instance in a rundown. Authored widget values live
+// inline in `data.widget` this pass; per-display rundown_overlay_data arrives
+// with the broadcast pass.
+export const rundownOverlays = pgTable('rundown_overlays', {
+  id: serial('id').primaryKey(),
+  rundownId: integer('rundown_id').notNull().references(() => rundowns.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), // denormalized
+  model: text('model').notNull(), // kebab registry key
+  category: text('category'),
+  template: text('template'),
+  widgetName: text('widget_name').notNull(),
+  layer: integer('layer').notNull().default(1), // 1..7 z-order
+  color: integer('color').notNull().default(1), // 1..7 UI tag color
+  displayFilter: text('display_filter'), // '' | '1'..'10'
+  previewImg: text('preview_img'),
+  isFullscreen: boolean('is_fullscreen').notNull().default(false),
+  hasNextButton: boolean('has_next_button').notNull().default(false),
+  order: integer('order').notNull().default(0),
+  inMixer: text('in_mixer'),
+  outMixer: text('out_mixer'),
+  innerMixer: text('inner_mixer'),
+  inTransitionCutPoint: doublePrecision('in_transition_cut_point'),
+  outTransitionCutPoint: doublePrecision('out_transition_cut_point'),
+  backgroundVideo: text('background_video'),
+  backgroundImage: text('background_image'),
+  data: jsonb('data').$type<{ widget: Record<string, unknown> }>().notNull().default({ widget: {} }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [index('rundown_overlays_rundown_idx').on(t.rundownId, t.order)])
