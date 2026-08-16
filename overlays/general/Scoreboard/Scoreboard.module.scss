@@ -1,0 +1,26 @@
+.root {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 16px 48px;
+  background: var(--color-bg-accent, rgba(0, 0, 0, 0.7));
+  font-family: var(--font-display, sans-serif);
+  font-display: block;
+  color: var(--color-primary, #ffffff);
+}
+
+.team {
+  font-size: 44px;
+  min-width: 320px;
+  text-align: center;
+}
+
+.score {
+  font-size: 56px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent, #ffd400);
+}

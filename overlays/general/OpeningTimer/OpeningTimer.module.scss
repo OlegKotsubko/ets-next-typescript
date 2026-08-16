@@ -1,0 +1,22 @@
+.root {
+  position: fixed;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: var(--font-display, sans-serif);
+  font-display: block;
+  color: var(--color-primary, #ffffff);
+}
+
+.label {
+  font-size: 32px;
+  letter-spacing: 0.2em;
+  opacity: 0.85;
+}
+
+.time {
+  font-size: 120px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}

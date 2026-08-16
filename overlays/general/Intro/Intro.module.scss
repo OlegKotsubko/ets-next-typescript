@@ -1,0 +1,26 @@
+// Full-screen splash — covers the whole 1920x1080 canvas.
+.root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: var(--color-bg, rgba(0, 0, 0, 0.85));
+  font-family: var(--font-display, sans-serif);
+  font-display: block;
+  color: var(--color-primary, #ffffff);
+}
+
+.heading {
+  font-size: 160px;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.sub {
+  font-size: 48px;
+  opacity: 0.8;
+  margin: 0;
+}
