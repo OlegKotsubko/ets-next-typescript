@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { optionalId } from './helpers'
 
 // A bracket is a STORED tree (no participant_count generation).
 export const createBracketSchema = z.object({
@@ -10,11 +11,11 @@ export type CreateBracketInput = z.infer<typeof createBracketSchema>
 export type UpdateBracketInput = z.infer<typeof updateBracketSchema>
 
 export const createMatchSchema = z.object({
-  bracketId: z.number().int().optional(),
-  participantLeftId: z.number().int().optional(),
-  participantRightId: z.number().int().optional(),
-  scoreLeft: z.number().int().default(0),
-  scoreRight: z.number().int().default(0),
+  bracketId: optionalId,
+  participantLeftId: optionalId,
+  participantRightId: optionalId,
+  scoreLeft: z.coerce.number().int().default(0),
+  scoreRight: z.coerce.number().int().default(0),
   status: z.enum(['scheduled', 'active', 'finished']).default('scheduled'),
   matchType: z.string().default('bo1'),
 })
@@ -23,8 +24,8 @@ export type CreateMatchInput = z.infer<typeof createMatchSchema>
 export type UpdateMatchInput = z.infer<typeof updateMatchSchema>
 
 export const upsertSeatingSchema = z.object({
-  leftTeamId: z.number().int().optional(),
-  rightTeamId: z.number().int().optional(),
+  leftTeamId: optionalId,
+  rightTeamId: optionalId,
   leftTeamPlayers: z.array(z.string()).default([]),
   rightTeamPlayers: z.array(z.string()).default([]),
   isActive: z.boolean().default(false),

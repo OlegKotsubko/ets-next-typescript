@@ -8,6 +8,7 @@ import { teamsApi } from './apis/teamsApi'
 import { sponsorsApi } from './apis/sponsorsApi'
 import { videosApi } from './apis/videosApi'
 import { bracketsApi } from './apis/bracketsApi'
+import { matchesApi } from './apis/matchesApi'
 import { projectsApi } from './apis/projectsApi'
 import { rundownsApi } from './apis/rundownsApi'
 import { tagsApi } from './apis/tagsApi'
@@ -22,6 +23,7 @@ const rootReducer = combineReducers({
   [sponsorsApi.reducerPath]: sponsorsApi.reducer,
   [videosApi.reducerPath]: videosApi.reducer,
   [bracketsApi.reducerPath]: bracketsApi.reducer,
+  [matchesApi.reducerPath]: matchesApi.reducer,
   [projectsApi.reducerPath]: projectsApi.reducer,
   [rundownsApi.reducerPath]: rundownsApi.reducer,
   [tagsApi.reducerPath]: tagsApi.reducer,
@@ -36,6 +38,7 @@ const entityMiddleware = [
   sponsorsApi.middleware,
   videosApi.middleware,
   bracketsApi.middleware,
+  matchesApi.middleware,
   projectsApi.middleware,
   rundownsApi.middleware,
   tagsApi.middleware,
