@@ -3,7 +3,7 @@ import type { ZodTypeAny } from 'zod'
 export type FieldDef = {
   name: string
   label: string
-  widget: 'text' | 'textarea' | 'select' | 'social-links' | 'typed-images' | 'asset-picker'
+  widget: 'text' | 'textarea' | 'select' | 'social-links' | 'typed-images' | 'roster' | 'asset-picker'
   options?: { value: string; label: string }[]
   optionsFrom?: 'tags' // resolved at the page level via withTagOptions()
   photoTypes?: string[] // for the 'typed-images' widget

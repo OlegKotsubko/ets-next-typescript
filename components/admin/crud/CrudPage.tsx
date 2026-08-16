@@ -8,6 +8,7 @@ import type { EntityDef } from '@/lib/entities/types'
 import { AssetPickerField } from './AssetPickerField'
 import { SocialLinksField } from './SocialLinksField'
 import { TypedImagesField } from './TypedImagesField'
+import { RosterField } from './RosterField'
 
 type EntityApi = Record<string, any>
 
@@ -142,6 +143,12 @@ s
                   if (field.widget === 'typed-images') {
                     return <TypedImagesField label={field.label}
                       photoTypes={field.photoTypes ?? []}
+                      value={rhf.value ?? []}
+                      onChange={rhf.onChange} />
+                  }
+                  if (field.widget === 'roster') {
+                    return <RosterField label={field.label}
+                      projectId={projectId}
                       value={rhf.value ?? []}
                       onChange={rhf.onChange} />
                   }
