@@ -33,5 +33,5 @@ next-env.d.ts
 # Claude Code local settings
 .claude/settings.local.json
 
-# Derived: synced from projects/*/{assets,styles}
-public/projects/
+# Uploaded media (local storage impl; object storage in prod)
+public/media/

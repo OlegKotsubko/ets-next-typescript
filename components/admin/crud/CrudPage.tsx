@@ -6,8 +6,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { EntityDef } from '@/lib/entities/types'
 import { AssetPickerField } from './AssetPickerField'
-import { ExtraMapField } from './ExtraMapField'
- 
+
 type EntityApi = Record<string, any>
 
 export function CrudPage<TRow extends { id: string }>({
@@ -132,10 +131,6 @@ s
                       value={rhf.value ?? null}
                       onChange={rhf.onChange}
                       kind="other" />
-                  }
-                  if (field.widget === 'extra-map') {
-                    return <ExtraMapField value={rhf.value ?? {}}
-                      onChange={rhf.onChange} />
                   }
                   return (
                     <TextField

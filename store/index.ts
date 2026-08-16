@@ -8,12 +8,8 @@ import { teamsApi } from './apis/teamsApi'
 import { sponsorsApi } from './apis/sponsorsApi'
 import { videosApi } from './apis/videosApi'
 import { bracketsApi } from './apis/bracketsApi'
-import { projectCssApi } from './apis/projectCssApi'
 import { projectsApi } from './apis/projectsApi'
-import { overlayPackagesApi } from './apis/overlayPackagesApi'
 import { rundownsApi } from './apis/rundownsApi'
-import { rundownItemsApi } from './apis/rundownItemsApi'
-import { titlesApi } from './apis/titlesApi'
 
 const rootReducer = combineReducers({
   editor,
@@ -24,12 +20,8 @@ const rootReducer = combineReducers({
   [sponsorsApi.reducerPath]: sponsorsApi.reducer,
   [videosApi.reducerPath]: videosApi.reducer,
   [bracketsApi.reducerPath]: bracketsApi.reducer,
-  [projectCssApi.reducerPath]: projectCssApi.reducer,
   [projectsApi.reducerPath]: projectsApi.reducer,
-  [overlayPackagesApi.reducerPath]: overlayPackagesApi.reducer,
   [rundownsApi.reducerPath]: rundownsApi.reducer,
-  [rundownItemsApi.reducerPath]: rundownItemsApi.reducer,
-  [titlesApi.reducerPath]: titlesApi.reducer,
 })
 
 const entityMiddleware = [
@@ -40,17 +32,13 @@ const entityMiddleware = [
   sponsorsApi.middleware,
   videosApi.middleware,
   bracketsApi.middleware,
-  projectCssApi.middleware,
   projectsApi.middleware,
-  overlayPackagesApi.middleware,
   rundownsApi.middleware,
-  rundownItemsApi.middleware,
-  titlesApi.middleware,
 ] as any[]
 
 export const store = configureStore({
   reducer: rootReducer,
-   
+
   middleware: (getDefault) => getDefault().concat(...entityMiddleware) as any,
 })
 

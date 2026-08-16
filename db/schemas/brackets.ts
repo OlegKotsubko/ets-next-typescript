@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { extraSchema } from './shared'
 
 export const bracketMatchSchema = z.object({
   id: z.string().uuid(),
@@ -14,7 +13,6 @@ export const bracketMatchSchema = z.object({
   placeholderLeft: z.string().default(''),
   placeholderRight: z.string().default(''),
   winnerId: z.string().uuid().nullable(),
-  extra: extraSchema,
 })
 
 export const bracketRoundSchema = z.object({

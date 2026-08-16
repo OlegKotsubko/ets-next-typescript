@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { extraSchema } from './shared'
 
 export const createTalentSchema = z.object({
   name: z.string().min(1).max(100),
@@ -11,7 +10,6 @@ export const createTalentSchema = z.object({
   rosterAssetId: z.string().uuid().optional(),
   rosterLeftAssetId: z.string().uuid().optional(),
   rosterRightAssetId: z.string().uuid().optional(),
-  extra: extraSchema,
 })
 export const updateTalentSchema = createTalentSchema.partial()
 export type CreateTalentInput = z.infer<typeof createTalentSchema>
