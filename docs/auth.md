@@ -28,12 +28,26 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from '@/db'
 import * as schema from '@/db/schema'
 
+// The Neon HTTP driver has no transaction support (`db.transaction()` throws),
+// and better-auth's drizzle adapter wraps sign-up (createUser + createAccount)
+// in one — so account creation fails outright. Degrade transactions to a
+// sequential passthrough for the auth adapter only, which is what the adapter
+// recommends for non-transactional drivers. See the caveat below.
+const authDb: typeof db = new Proxy(db, {
+  get(target, prop, receiver) {
+    if (prop === 'transaction') {
+      return (cb: (tx: typeof db) => unknown) => cb(authDb)
+    }
+    return Reflect.get(target, prop, receiver)
+  },
+})
+
 // disableSignUp keeps POST /api/auth/sign-up/email closed in every deploy —
 // "no public sign-up" is a server property, not a missing UI. Only
 // scripts/create-user.ts opts out via its own instance.
 export function buildAuthOptions({ allowSignUp = false }: { allowSignUp?: boolean } = {}) {
   return {
-    database: drizzleAdapter(db, { provider: 'pg', schema, usePlural: true }),
+    database: drizzleAdapter(authDb, { provider: 'pg', schema, usePlural: true }),
     emailAndPassword: {
       enabled: true,
       disableSignUp: !allowSignUp,
@@ -48,6 +62,8 @@ export const auth = betterAuth(buildAuthOptions())
 ```
 
 `usePlural: true` is what maps better-auth's singular model names onto the plural tables hand-written in `db/schema.ts` (`users`, `sessions`, `accounts`, `verifications`).
+
+> **Caveat: the Neon HTTP driver has no transactions.** `@neondatabase/serverless`'s HTTP driver throws `No transactions support in neon-http driver` when `db.transaction()` is called, and better-auth's drizzle adapter wraps its insert-then-read-back in a transaction — so sign-up (and any create) fails until transactions are neutralized. The adapter documents a `transaction: false` config for exactly this, but on this driver `.transaction` **throws** rather than degrading, so we wrap `db` in a Proxy whose `.transaction(cb)` runs `cb` sequentially (no `BEGIN`/`COMMIT`). Safe for low-concurrency admin auth; the entity data layer already avoids transactions on this driver for the same reason (composite player/team writes are sequential). A transactional driver (node-postgres, or Neon's WebSocket `Pool`) would remove the need for the Proxy.
 
 ```ts
 // app/api/auth/[...all]/route.ts
@@ -236,5 +252,6 @@ The session returned by `auth.api.getSession` contains `user.id`, `user.username
 - **Login succeeds in the network tab but `/projects` redirects back to `/login`** — `BETTER_AUTH_URL` doesn't match the origin. Cookies are dropped because the cookie domain doesn't match.
 - **`BETTER_AUTH_SECRET` errors in production but works locally** — the variable isn't in the server's env file (`/etc/ets/ets.env`), or the service wasn't restarted after adding it. Set it and `sudo systemctl restart ets`.
 - **Sign-up returns 4xx / `SIGNUP_DISABLED`** — working as designed (`disableSignUp`). Use `scripts/create-user.ts`.
+- **`create-user.ts` fails with `No transactions support in neon-http driver`** — the Neon HTTP driver can't run transactions and better-auth wraps sign-up in one. Fixed by the `authDb` transaction-passthrough Proxy in `lib/auth.ts` (see [Server setup](#server-setup)); ensure it's in place, or switch to a transactional driver.
 - **`proxy.ts` never runs** — you're on Next 15.x, which silently ignores it. The app requires `next@^16`.
 - **Top-level await fails in a script** — the repo has no `"type": "module"`, so tsx emits CJS. Wrap in an async `main()`.
