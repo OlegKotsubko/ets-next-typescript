@@ -6,10 +6,12 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { EntityDef } from '@/lib/entities/types'
 import { AssetPickerField } from './AssetPickerField'
+import { SocialLinksField } from './SocialLinksField'
+import { TypedImagesField } from './TypedImagesField'
 
 type EntityApi = Record<string, any>
 
-export function CrudPage<TRow extends { id: string }>({
+export function CrudPage<TRow extends { id: number }>({
   projectId, entityDef, api,
 }: {
   projectId: string
@@ -105,7 +107,7 @@ s
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {entityDef.fields.map((field) => (
               <Controller
-                key={field.name}
+                key={`${editing ? editing.id : 'new'}-${field.name}`}
                 name={field.name}
                 control={control}
                 render={({ field: rhf, fieldState }) => {
@@ -131,6 +133,17 @@ s
                       value={rhf.value ?? null}
                       onChange={rhf.onChange}
                       kind="other" />
+                  }
+                  if (field.widget === 'social-links') {
+                    return <SocialLinksField label={field.label}
+                      value={rhf.value ?? {}}
+                      onChange={rhf.onChange} />
+                  }
+                  if (field.widget === 'typed-images') {
+                    return <TypedImagesField label={field.label}
+                      photoTypes={field.photoTypes ?? []}
+                      value={rhf.value ?? []}
+                      onChange={rhf.onChange} />
                   }
                   return (
                     <TextField

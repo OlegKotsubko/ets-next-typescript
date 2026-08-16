@@ -20,7 +20,7 @@ export function createEntityApi<TRow, TCreate, TUpdate>(config: {
         query: (projectId: string) => `/projects/${projectId}/${basePath}`,
         providesTags: (_r, _e, projectId: string) => [{ type: tagType, id: `LIST:${projectId}` }],
       }),
-      [`get${tagType}`]: b.query<TRow, { projectId: string; id: string }>({
+      [`get${tagType}`]: b.query<TRow, { projectId: string; id: number }>({
         query: ({ projectId, id }) => `/projects/${projectId}/${basePath}/${id}`,
         providesTags: (_r, _e, { id }) => [{ type: tagType, id }],
       }),
@@ -32,7 +32,7 @@ export function createEntityApi<TRow, TCreate, TUpdate>(config: {
         query: ({ projectId, id, data }) => ({ url: `/projects/${projectId}/${basePath}/${id}`, method: 'PATCH', body: data }),
         invalidatesTags: (_r, _e, { projectId, id }) => [{ type: tagType, id }, { type: tagType, id: `LIST:${projectId}` }],
       }),
-      [`delete${tagType}`]: b.mutation<void, { projectId: string; id: string }>({
+      [`delete${tagType}`]: b.mutation<void, { projectId: string; id: number }>({
         query: ({ projectId, id }) => ({ url: `/projects/${projectId}/${basePath}/${id}`, method: 'DELETE' }),
         invalidatesTags: (_r, _e, { projectId, id }) => [{ type: tagType, id }, { type: tagType, id: `LIST:${projectId}` }],
       }),

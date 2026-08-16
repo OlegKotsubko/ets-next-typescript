@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { z } from 'zod'
-import { pgTable, uuid, text } from 'drizzle-orm/pg-core'
+import { pgTable, serial, integer, text } from 'drizzle-orm/pg-core'
 
 const getSessionMock = vi.fn()
 vi.mock('@/lib/auth', () => ({ auth: { api: { getSession: (...args: unknown[]) => getSessionMock(...args) } } }))
@@ -17,15 +17,16 @@ vi.mock('@/db', () => ({ db: dbMock }))
 const { createCrudHandlers } = await import('@/lib/crud/createCrudHandlers')
 
 const widgets = pgTable('widgets', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  projectId: uuid('project_id').notNull(),
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
   name: text('name').notNull(),
 })
 const createSchema = z.object({ name: z.string().min(1) })
 const updateSchema = createSchema.partial()
 
-const PROJECT_A = '11111111-1111-1111-1111-111111111111'
-const ROW_IN_A = '22222222-2222-2222-2222-222222222222'
+// Route params arrive as strings; the handler must coerce them to integers.
+const PROJECT_A = '1'
+const ROW_IN_A = '2'
 
 function req(body?: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: body ? JSON.stringify(body) : undefined })
@@ -50,14 +51,16 @@ describe('createCrudHandlers', () => {
     expect(res.status).toBe(400)
   })
 
-  it('POST inserts with projectId from the URL, ignoring any projectId in the body', async () => {
+  it('POST inserts an INTEGER projectId from the URL, ignoring any body projectId', async () => {
     getSessionMock.mockResolvedValue({ user: { id: 'u1' } })
-    const returning = vi.fn().mockResolvedValue([{ id: ROW_IN_A, projectId: PROJECT_A, name: 'x' }])
+    const returning = vi.fn().mockResolvedValue([{ id: 2, projectId: 1, name: 'x' }])
     const values = vi.fn().mockReturnValue({ returning })
     dbMock.insert.mockReturnValue({ values })
     const { POST } = createCrudHandlers({ table: widgets as never, createSchema, updateSchema })
-    await POST(req({ name: 'x', projectId: 'attacker-project' }), { params: Promise.resolve({ projectId: PROJECT_A }) })
-    expect(values).toHaveBeenCalledWith(expect.objectContaining({ name: 'x', projectId: PROJECT_A }))
+    await POST(req({ name: 'x', projectId: 'attacker' }), { params: Promise.resolve({ projectId: PROJECT_A }) })
+    const arg = values.mock.calls[0][0]
+    expect(arg).toMatchObject({ name: 'x', projectId: 1 })
+    expect(typeof arg.projectId).toBe('number')
   })
 
   it('PATCH returns 404 when the row belongs to a different project', async () => {
@@ -73,7 +76,7 @@ describe('createCrudHandlers', () => {
 
   it('DELETE returns 204 when the row is deleted', async () => {
     getSessionMock.mockResolvedValue({ user: { id: 'u1' } })
-    const returning = vi.fn().mockResolvedValue([{ id: ROW_IN_A }])
+    const returning = vi.fn().mockResolvedValue([{ id: 2 }])
     const where = vi.fn().mockReturnValue({ returning })
     dbMock.delete.mockReturnValue({ where })
     const { DELETE } = createCrudHandlers({ table: widgets as never, createSchema, updateSchema })
