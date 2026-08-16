@@ -54,8 +54,13 @@ export function CrudPage<TRow extends { id: number }>({
   }
 
   async function onSubmit(data: Record<string, unknown>) {
-    if (editing) await updateRow({ projectId, id: editing.id, data })
-    else await createRow({ projectId, data })
+    // Nullable DB columns come back as null and empty text fields as ''; both
+    // would fail `z.*.optional()`. Strip them so optional fields validate.
+    const cleaned = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== null && v !== ''),
+    )
+    if (editing) await updateRow({ projectId, id: editing.id, data: cleaned })
+    else await createRow({ projectId, data: cleaned })
     setOpen(false)
   }
 

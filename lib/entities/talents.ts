@@ -1,20 +1,13 @@
 import { createTalentSchema } from '@/db/schemas/talents'
 import type { EntityDef } from './types'
-import type { Extra } from '@/db/schemas/shared'
 
 export type Talent = {
-  id: string
-  projectId: string
-  name: string
-  surname: string | null
-  nickname: string | null
-  avatarAssetId: string | null
-  leftImageAssetId: string | null
-  rightImageAssetId: string | null
-  rosterAssetId: string | null
-  rosterLeftAssetId: string | null
-  rosterRightAssetId: string | null
-  extra: Extra
+  id: number
+  projectId: number
+  nickname: string
+  socialLinks: Record<string, string>
+  extraText: string | null
+  photoUrl: string | null
   createdAt: string
   updatedAt: string
 }
@@ -22,21 +15,13 @@ export type Talent = {
 export const talentsEntityDef: EntityDef<Talent> = {
   entityName: 'Talent',
   fields: [
-    { name: 'name', label: 'Name', widget: 'text' },
-    { name: 'surname', label: 'Surname', widget: 'text' },
     { name: 'nickname', label: 'Nickname', widget: 'text' },
-    { name: 'avatarAssetId', label: 'Avatar', widget: 'asset-picker' },
-    { name: 'leftImageAssetId', label: 'Left Image', widget: 'asset-picker' },
-    { name: 'rightImageAssetId', label: 'Right Image', widget: 'asset-picker' },
-    { name: 'rosterAssetId', label: 'Roster Image', widget: 'asset-picker' },
-    { name: 'rosterLeftAssetId', label: 'Roster Left Image', widget: 'asset-picker' },
-    { name: 'rosterRightAssetId', label: 'Roster Right Image', widget: 'asset-picker' },
-    { name: 'extra', label: 'Extra fields', widget: 'extra-map' },
+    { name: 'photoUrl', label: 'Photo URL', widget: 'text' },
+    { name: 'extraText', label: 'Extra text', widget: 'textarea' },
+    { name: 'socialLinks', label: 'Social links', widget: 'social-links' },
   ],
   createSchema: createTalentSchema,
   columns: [
-    { field: 'name', headerName: 'Name' },
-    { field: 'surname', headerName: 'Surname' },
     { field: 'nickname', headerName: 'Nickname' },
   ],
 }
