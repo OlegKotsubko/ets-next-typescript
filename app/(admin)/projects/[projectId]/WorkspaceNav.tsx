@@ -6,9 +6,9 @@ import { Tabs, Tab, Box } from '@mui/material'
 export default function WorkspaceNav({ projectId }: { projectId: string }) {
   const pathname = usePathname()
   const dataHref = `/projects/${projectId}/data`
-  const rundownsHref = `/projects/${projectId}/rundowns`
+  const overlaysHref = `/projects/${projectId}/rundowns`
 
-  const value = pathname.startsWith(rundownsHref) ? rundownsHref : dataHref
+  const value = pathname.startsWith(overlaysHref) ? overlaysHref : dataHref
 
   return (
     <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -17,12 +17,16 @@ export default function WorkspaceNav({ projectId }: { projectId: string }) {
           value={dataHref}
           component={Link}
           href={dataHref} />
-        <Tab label="Rundowns"
-          value={rundownsHref}
+        <Tab label="Overlays"
+          value={overlaysHref}
           component={Link}
-          href={rundownsHref} />
-        <Tab label="Midi"
+          href={overlaysHref} />
+        <Tab label="MIDI"
           value="midi-disabled"
+          disabled
+          aria-disabled="true" />
+        <Tab label="Bluetooth"
+          value="bluetooth-disabled"
           disabled
           aria-disabled="true" />
       </Tabs>

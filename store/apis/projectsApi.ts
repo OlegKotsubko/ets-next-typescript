@@ -1,21 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 export type Project = {
-  id: string
-  name: string
-  mode: 'team_vs_team' | 'player_vs_player'
-  label: string
-  pictureUrl: string | null
-  eventDate: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export type CreateProjectInput = {
-  name: string
-  mode: 'team_vs_team' | 'player_vs_player'
-  label: string
-  eventDate?: string
+  id: number
+  title: string
+  heroSectionUrl: string | null
+  status: 'draft' | 'upcoming' | 'ongoing' | 'ended'
+  disciplineId: number | null
+  isFavourite: boolean
 }
 
 export const projectsApi = createApi({
@@ -23,15 +14,24 @@ export const projectsApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
   tagTypes: ['Project'],
   endpoints: (b) => ({
-    listProjects: b.query<Project[], void>({
-      query: () => '/projects',
+    listProjects: b.query<Project[], { status?: string } | void>({
+      query: (arg) => {
+        const status = arg && 'status' in arg ? arg.status : undefined
+        return status ? `/projects?status=${status}` : '/projects'
+      },
       providesTags: [{ type: 'Project', id: 'LIST' }],
     }),
-    createProject: b.mutation<Project, CreateProjectInput>({
-      query: (data) => ({ url: '/projects', method: 'POST', body: data }),
+    setFavourite: b.mutation<void, { projectId: number }>({
+      query: ({ projectId }) => ({ url: `/projects/${projectId}/favourite`, method: 'PUT' }),
+      invalidatesTags: [{ type: 'Project', id: 'LIST' }],
+    }),
+    unsetFavourite: b.mutation<void, { projectId: number }>({
+      query: ({ projectId }) => ({ url: `/projects/${projectId}/favourite`, method: 'DELETE' }),
       invalidatesTags: [{ type: 'Project', id: 'LIST' }],
     }),
   }),
 })
 
-export const { useListProjectsQuery, useCreateProjectMutation } = projectsApi
+export const {
+  useListProjectsQuery, useSetFavouriteMutation, useUnsetFavouriteMutation,
+} = projectsApi

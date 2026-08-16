@@ -16,14 +16,14 @@ export default async function ProjectWorkspaceLayout({
   if (!session) redirect('/login')
 
   const { projectId } = await params
-  const [project] = await db.select().from(projects).where(eq(projects.id, projectId))
+  const [project] = await db.select().from(projects).where(eq(projects.id, Number(projectId)))
   if (!project) notFound()
 
   return (
     <Box>
       <Box sx={{ px: 4, pt: 3 }}>
         <Typography variant="h5">
-          {project.name}
+          {project.title}
         </Typography>
       </Box>
       <Box sx={{ px: 4 }}>

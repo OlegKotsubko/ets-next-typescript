@@ -5,13 +5,15 @@ import { Box, Typography, List, ListItemButton, ListItemText } from '@mui/materi
 
 const SECTIONS = [
   { slug: 'players', label: 'Players' },
-  { slug: 'talents', label: 'Talents' },
   { slug: 'teams', label: 'Teams' },
+  { slug: 'talents', label: 'Talents' },
   { slug: 'sponsors', label: 'Sponsors' },
-  { slug: 'videos', label: 'Videos' },
-  { slug: 'assets', label: 'Assets' },
+  { slug: 'tags', label: 'Disciplines / Tags' },
+  { slug: 'themes', label: 'Themes' },
+  { slug: 'matches', label: 'Matches' },
   { slug: 'brackets', label: 'Brackets' },
-  { slug: 'css', label: 'Project CSS' },
+  { slug: 'assets', label: 'Assets' },
+  { slug: 'videos', label: 'Videos' },
 ]
 
 export default function DataHubPage({ params }: { params: Promise<{ projectId: string }> }) {
