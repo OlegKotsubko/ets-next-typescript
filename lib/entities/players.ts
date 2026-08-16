@@ -1,44 +1,48 @@
 import { createPlayerSchema } from '@/db/schemas/players'
 import type { EntityDef } from './types'
-import type { Extra } from '@/db/schemas/shared'
+
+export type PlayerPhoto = { photoType: string; url: string }
 
 export type Player = {
-  id: string
-  projectId: string
-  name: string
-  surname: string | null
-  nickname: string | null
-  avatarAssetId: string | null
-  imageAssetId: string | null
-  leftImageAssetId: string | null
-  rightImageAssetId: string | null
-  rosterAssetId: string | null
-  rosterLeftAssetId: string | null
-  rosterRightAssetId: string | null
-  extra: Extra
+  id: number
+  projectId: number
+  nickname: string
+  firstName: string | null
+  lastName: string | null
+  country: string | null
+  disciplineId: number | null
+  gameId: string | null
+  position: string | null
+  role: string | null
+  birthDate: string | null
+  socialLinks: Record<string, string>
+  photos?: PlayerPhoto[]
   createdAt: string
   updatedAt: string
 }
 
+const PHOTO_TYPES = ['avatar', 'left', 'right', 'roster', 'left_lg', 'right_lg', 'statistics']
+
 export const playersEntityDef: EntityDef<Player> = {
   entityName: 'Player',
   fields: [
-    { name: 'name', label: 'Name', widget: 'text' },
-    { name: 'surname', label: 'Surname', widget: 'text' },
     { name: 'nickname', label: 'Nickname', widget: 'text' },
-    { name: 'avatarAssetId', label: 'Avatar', widget: 'asset-picker' },
-    { name: 'imageAssetId', label: 'Image', widget: 'asset-picker' },
-    { name: 'leftImageAssetId', label: 'Left Image', widget: 'asset-picker' },
-    { name: 'rightImageAssetId', label: 'Right Image', widget: 'asset-picker' },
-    { name: 'rosterAssetId', label: 'Roster Image', widget: 'asset-picker' },
-    { name: 'rosterLeftAssetId', label: 'Roster Left Image', widget: 'asset-picker' },
-    { name: 'rosterRightAssetId', label: 'Roster Right Image', widget: 'asset-picker' },
-    { name: 'extra', label: 'Extra fields', widget: 'extra-map' },
+    { name: 'firstName', label: 'First name', widget: 'text' },
+    { name: 'lastName', label: 'Last name', widget: 'text' },
+    { name: 'country', label: 'Country', widget: 'text' },
+    { name: 'disciplineId', label: 'Discipline', widget: 'select', optionsFrom: 'tags' },
+    { name: 'gameId', label: 'Game ID', widget: 'text' },
+    { name: 'position', label: 'Position', widget: 'text' },
+    { name: 'role', label: 'Role', widget: 'text' },
+    { name: 'birthDate', label: 'Birth date (YYYY-MM-DD)', widget: 'text' },
+    { name: 'socialLinks', label: 'Social links', widget: 'social-links' },
+    { name: 'photos', label: 'Photos', widget: 'typed-images', photoTypes: PHOTO_TYPES },
   ],
   createSchema: createPlayerSchema,
   columns: [
-    { field: 'name', headerName: 'Name' },
-    { field: 'surname', headerName: 'Surname' },
     { field: 'nickname', headerName: 'Nickname' },
+    { field: 'firstName', headerName: 'First name' },
+    { field: 'lastName', headerName: 'Last name' },
+    { field: 'country', headerName: 'Country' },
   ],
 }
