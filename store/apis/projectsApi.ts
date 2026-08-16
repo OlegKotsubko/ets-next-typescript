@@ -21,6 +21,10 @@ export const projectsApi = createApi({
       },
       providesTags: [{ type: 'Project', id: 'LIST' }],
     }),
+    getProject: b.query<Project, string>({
+      query: (projectId) => `/projects/${projectId}`,
+      providesTags: (_r, _e, projectId) => [{ type: 'Project', id: projectId }],
+    }),
     setFavourite: b.mutation<void, { projectId: number }>({
       query: ({ projectId }) => ({ url: `/projects/${projectId}/favourite`, method: 'PUT' }),
       invalidatesTags: [{ type: 'Project', id: 'LIST' }],
@@ -33,5 +37,5 @@ export const projectsApi = createApi({
 })
 
 export const {
-  useListProjectsQuery, useSetFavouriteMutation, useUnsetFavouriteMutation,
+  useListProjectsQuery, useGetProjectQuery, useSetFavouriteMutation, useUnsetFavouriteMutation,
 } = projectsApi
