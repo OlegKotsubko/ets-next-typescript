@@ -1,16 +1,19 @@
 import { z } from 'zod'
 
+const photoType = z.enum(['avatar', 'left', 'right', 'roster', 'left_lg', 'right_lg', 'statistics'])
+
 export const createPlayerSchema = z.object({
-  name: z.string().min(1).max(100),
-  surname: z.string().max(100).optional(),
-  nickname: z.string().max(100).optional(),
-  avatarAssetId: z.string().uuid().optional(),
-  imageAssetId: z.string().uuid().optional(),
-  leftImageAssetId: z.string().uuid().optional(),
-  rightImageAssetId: z.string().uuid().optional(),
-  rosterAssetId: z.string().uuid().optional(),
-  rosterLeftAssetId: z.string().uuid().optional(),
-  rosterRightAssetId: z.string().uuid().optional(),
+  nickname: z.string().min(1).max(25),
+  firstName: z.string().max(25).optional(),
+  lastName: z.string().max(25).optional(),
+  country: z.string().optional(),
+  disciplineId: z.number().int().optional(),
+  gameId: z.string().regex(/^[a-z0-9]*$/i).optional(),
+  position: z.string().optional(),
+  role: z.string().optional(),
+  birthDate: z.string().date().optional(),
+  socialLinks: z.record(z.string(), z.string()).default({}),
+  photos: z.array(z.object({ photoType, url: z.string().url() })).optional(),
 })
 export const updatePlayerSchema = createPlayerSchema.partial()
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>

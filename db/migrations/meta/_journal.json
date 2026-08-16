@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1782904682848,
-      "tag": "0000_naive_prism",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1782904720676,
-      "tag": "0001_seed_singleton_project",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1783072241763,
-      "tag": "0002_smooth_mattie_franklin",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1786439156784,
-      "tag": "0003_warm_wolfsbane",
+      "when": 1786885185948,
+      "tag": "0000_useful_trish_tilby",
       "breakpoints": true
     }
   ]

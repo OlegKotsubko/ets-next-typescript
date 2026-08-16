@@ -25,6 +25,7 @@ describe('better-auth tables', () => {
   })
   it('user ids are text (better-auth), not uuid', () => {
     expect(getTableColumns(users).id.columnType).toBe('PgText')
-    expect(getTableColumns(rundowns).ownerId.columnType).toBe('PgText')
+    // rundowns.userId references the better-auth text user id.
+    expect(getTableColumns(rundowns).userId.columnType).toBe('PgText')
   })
 })

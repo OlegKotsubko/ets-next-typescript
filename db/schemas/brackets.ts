@@ -1,31 +1,32 @@
 import { z } from 'zod'
 
-export const bracketMatchSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  scheduledAt: z.string().datetime().nullable(),
-  leftParticipantId: z.string().uuid().nullable(),
-  rightParticipantId: z.string().uuid().nullable(),
-  scoreLeft: z.number().int().nonnegative().default(0),
-  scoreRight: z.number().int().nonnegative().default(0),
-  status: z.enum(['scheduled', 'active', 'finished']).default('scheduled'),
-  matchType: z.enum(['bo1', 'bo2', 'bo3', 'bo4', 'bo5', 'bo6']).default('bo1'),
-  placeholderLeft: z.string().default(''),
-  placeholderRight: z.string().default(''),
-  winnerId: z.string().uuid().nullable(),
-})
-
-export const bracketRoundSchema = z.object({
-  name: z.string(),
-  matches: z.array(bracketMatchSchema),
-})
-export type BracketRound = z.infer<typeof bracketRoundSchema>
-export type BracketMatch = z.infer<typeof bracketMatchSchema>
-
+// A bracket is a STORED tree (no participant_count generation).
 export const createBracketSchema = z.object({
-  name: z.string().min(1),
-  participantCount: z.number().int().refine((n) => n >= 2 && (n & (n - 1)) === 0, 'must be a power of 2'),
+  name: z.string().min(1).max(120),
+  structure: z.unknown().default({}),
 })
+export const updateBracketSchema = createBracketSchema.partial()
+export type CreateBracketInput = z.infer<typeof createBracketSchema>
+export type UpdateBracketInput = z.infer<typeof updateBracketSchema>
 
-export const updateMatchSchema = bracketMatchSchema.omit({ id: true }).partial()
+export const createMatchSchema = z.object({
+  bracketId: z.number().int().optional(),
+  participantLeftId: z.number().int().optional(),
+  participantRightId: z.number().int().optional(),
+  scoreLeft: z.number().int().default(0),
+  scoreRight: z.number().int().default(0),
+  status: z.enum(['scheduled', 'active', 'finished']).default('scheduled'),
+  matchType: z.string().default('bo1'),
+})
+export const updateMatchSchema = createMatchSchema.partial()
+export type CreateMatchInput = z.infer<typeof createMatchSchema>
 export type UpdateMatchInput = z.infer<typeof updateMatchSchema>
+
+export const upsertSeatingSchema = z.object({
+  leftTeamId: z.number().int().optional(),
+  rightTeamId: z.number().int().optional(),
+  leftTeamPlayers: z.array(z.string()).default([]),
+  rightTeamPlayers: z.array(z.string()).default([]),
+  isActive: z.boolean().default(false),
+})
+export type UpsertSeatingInput = z.infer<typeof upsertSeatingSchema>

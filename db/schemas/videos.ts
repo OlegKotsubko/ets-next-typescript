@@ -2,9 +2,8 @@ import { z } from 'zod'
 
 export const createVideoSchema = z.object({
   name: z.string().min(1).max(120),
-  url: z.string().min(1),
-  durationMs: z.number().int().positive().optional(),
-  loop: z.boolean().default(false),
+  url: z.string().url(),
+  videoType: z.enum(['mixer', 'background']).default('background'),
 })
 export const updateVideoSchema = createVideoSchema.partial()
 export type CreateVideoInput = z.infer<typeof createVideoSchema>

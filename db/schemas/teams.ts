@@ -1,23 +1,22 @@
 import { z } from 'zod'
 
 export const createTeamSchema = z.object({
-  name: z.string().min(1).max(120),
-  avatarAssetId: z.string().uuid().optional(),
-  leftImageAssetId: z.string().uuid().optional(),
-  rightImageAssetId: z.string().uuid().optional(),
-  bigAvatarAssetId: z.string().uuid().optional(),
+  name: z.string().min(2).max(120),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  disciplineId: z.number().int().optional(),
+  opendotaId: z.string().optional(),
+  socialLinks: z.record(z.string(), z.string()).default({}),
+  logos: z.array(z.object({
+    photoType: z.enum(['logo', 'ets_logo', 'ets_graphics']),
+    url: z.string().url(),
+  })).optional(),
+  roster: z.array(z.object({
+    playerId: z.number().int(),
+    isCaptain: z.boolean().default(false),
+    isStandIn: z.boolean().default(false),
+  })).max(10).optional(),
 })
 export const updateTeamSchema = createTeamSchema.partial()
 export type CreateTeamInput = z.infer<typeof createTeamSchema>
 export type UpdateTeamInput = z.infer<typeof updateTeamSchema>
-
-export const rosterSlotSchema = z.object({
-  playerId: z.string().uuid(),
-  slot: z.number().int().nonnegative(),
-  isCaptain: z.boolean().default(false),
-  isStandIn: z.boolean().default(false),
-})
-export const replaceRosterSchema = z.object({
-  slots: z.array(rosterSlotSchema).max(5),
-})
-export type ReplaceRosterInput = z.infer<typeof replaceRosterSchema>

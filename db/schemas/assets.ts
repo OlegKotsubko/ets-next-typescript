@@ -1,11 +1,11 @@
 import { z } from 'zod'
 
 export const createAssetSchema = z.object({
-  filename: z.string().min(1),
-  mimeType: z.string().min(1),
-  sizeBytes: z.number().int().positive(),
+  name: z.string().min(1).max(120),
   url: z.string().min(1),
-  kind: z.enum(['logo', 'photo', 'graphic', 'other']),
+  assetType: z.enum(['decor', 'background']).default('decor'),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().int().optional(),
 })
 export const updateAssetSchema = createAssetSchema.partial()
 export type CreateAssetInput = z.infer<typeof createAssetSchema>
