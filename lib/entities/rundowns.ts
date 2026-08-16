@@ -1,8 +1,9 @@
 export type Rundown = {
-  id: string
-  projectId: string
+  id: number
+  projectId: number
+  userId: string | null
   name: string
-  ownerId: string | null
+  image: string | null
   createdAt: string
   updatedAt: string
 }
