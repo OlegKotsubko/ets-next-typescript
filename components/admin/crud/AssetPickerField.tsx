@@ -7,8 +7,8 @@ export function AssetPickerField({
   projectId, value, onChange, kind,
 }: {
   projectId: string
-  value: string | null
-  onChange: (_assetId: string | null) => void
+  value: number | null
+  onChange: (_assetId: number | null) => void
   kind: string
 }) {
   const { data: assets = [] } = useListAssetsQuery(projectId)
@@ -36,16 +36,16 @@ export function AssetPickerField({
         size="small"
         label="Asset"
         value={value ?? ''}
-        onChange={(e) => onChange(e.target.value || null)}
+        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
         sx={{ minWidth: 200 }}
       >
         <MenuItem value="">
 None
         </MenuItem>
-        {assets.map((a: { id: string; filename: string }) => (
+        {assets.map((a: { id: number; name: string }) => (
           <MenuItem key={a.id}
             value={a.id}>
-            {a.filename}
+            {a.name}
           </MenuItem>
         ))}
       </TextField>

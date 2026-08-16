@@ -2,13 +2,13 @@ import { createAssetSchema } from '@/db/schemas/assets'
 import type { EntityDef } from './types'
 
 export type Asset = {
-  id: string
-  projectId: string
-  filename: string
-  mimeType: string
-  sizeBytes: number
+  id: number
+  projectId: number
+  name: string
   url: string
-  kind: string
+  assetType: 'decor' | 'background'
+  mimeType: string | null
+  sizeBytes: number | null
   createdAt: string
   updatedAt: string
 }
@@ -16,23 +16,21 @@ export type Asset = {
 export const assetsEntityDef: EntityDef<Asset> = {
   entityName: 'Asset',
   fields: [
-    { name: 'filename', label: 'Filename', widget: 'text' },
+    { name: 'name', label: 'Name', widget: 'text' },
+    { name: 'url', label: 'URL', widget: 'text' },
     {
-      name: 'kind',
-      label: 'Kind',
+      name: 'assetType',
+      label: 'Type',
       widget: 'select',
       options: [
-        { value: 'logo', label: 'Logo' },
-        { value: 'photo', label: 'Photo' },
-        { value: 'graphic', label: 'Graphic' },
-        { value: 'other', label: 'Other' },
+        { value: 'decor', label: 'Decor' },
+        { value: 'background', label: 'Background' },
       ],
     },
   ],
   createSchema: createAssetSchema,
   columns: [
-    { field: 'filename', headerName: 'Filename' },
-    { field: 'kind', headerName: 'Kind' },
-    { field: 'sizeBytes', headerName: 'Size (bytes)' },
+    { field: 'name', headerName: 'Name' },
+    { field: 'assetType', headerName: 'Type' },
   ],
 }

@@ -10,19 +10,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ project
   const { projectId } = await params
   const formData = await req.formData()
   const file = formData.get('file')
-  const kind = formData.get('kind')
-  if (!(file instanceof File) || typeof kind !== 'string') {
-    return Response.json({ error: 'file and kind are required' }, { status: 400 })
+  if (!(file instanceof File)) {
+    return Response.json({ error: 'file is required' }, { status: 400 })
   }
+  const assetType = formData.get('assetType') === 'background' ? 'background' : 'decor'
 
-  const { url, sizeBytes } = await uploadAsset(projectId, file, kind)
+  const { url, sizeBytes } = await uploadAsset(projectId, file)
   const [row] = await db.insert(assets).values({
-    projectId,
-    filename: file.name,
+    projectId: Number(projectId),
+    name: file.name,
+    url,
     mimeType: file.type,
     sizeBytes,
-    url,
-    kind,
+    assetType,
   }).returning()
   return Response.json(row, { status: 201 })
 }
