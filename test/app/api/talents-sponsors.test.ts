@@ -13,7 +13,7 @@ const sponsors = await import('@/app/api/projects/[projectId]/sponsors/route')
 function body(o: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(o) })
 }
-const params = (o: Record<string, string>) => ({ params: Promise.resolve(o) })
+const params = (o: Record<string, string>) => ({ params: Promise.resolve<any>(o) })
 
 describe('talents + sponsors CRUD', () => {
   beforeEach(() => vi.clearAllMocks())

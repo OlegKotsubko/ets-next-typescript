@@ -14,7 +14,7 @@ const seating = await import('@/app/api/projects/[projectId]/matches/[id]/seatin
 function json(o: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(o) })
 }
-const params = (o: Record<string, string>) => ({ params: Promise.resolve(o) })
+const params = (o: Record<string, string>) => ({ params: Promise.resolve<any>(o) })
 
 function thenable(rows: unknown[]) {
   const b: any = {
@@ -59,7 +59,7 @@ describe('brackets + matches + seatings', () => {
     getSessionMock.mockResolvedValue({ user: { id: 'u1' } })
     dbMock.select
       .mockReturnValueOnce(thenable([{ id: 5, projectId: 3 }])) // ownership
-      .mockReturnValueOnce(thenable([{ id: 5 }, { id: 9 }]))     // project matches
+      .mockReturnValueOnce(thenable([{ id: 5 }, { id: 9 }])) // project matches
     const updWhere = vi.fn().mockResolvedValue(undefined)
     const updSet = vi.fn().mockReturnValue({ where: updWhere })
     dbMock.update.mockReturnValue({ set: updSet })

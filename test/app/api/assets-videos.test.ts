@@ -17,7 +17,7 @@ const videos = await import('@/app/api/projects/[projectId]/videos/route')
 function json(o: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(o) })
 }
-const params = (o: Record<string, string>) => ({ params: Promise.resolve(o) })
+const params = (o: Record<string, string>) => ({ params: Promise.resolve<any>(o) })
 
 describe('assets + videos', () => {
   beforeEach(() => vi.clearAllMocks())

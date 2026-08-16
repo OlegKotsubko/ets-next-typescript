@@ -31,8 +31,8 @@ export function CrudPage<TRow extends { id: number }>({
 
   const useListQuery = api[listHookName] as (projectId: string) => { data?: TRow[] }
   const useCreateMutation = api[createHookName] as Mutate<{ projectId: string; data: unknown }>
-  const useUpdateMutation = api[updateHookName] as Mutate<{ projectId: string; id: string; data: unknown }>
-  const useDeleteMutation = api[deleteHookName] as Mutate<{ projectId: string; id: string }>
+  const useUpdateMutation = api[updateHookName] as Mutate<{ projectId: string; id: number; data: unknown }>
+  const useDeleteMutation = api[deleteHookName] as Mutate<{ projectId: string; id: number }>
 
   const { data: rows = [] } = useListQuery(projectId)
   const [createRow] = useCreateMutation()

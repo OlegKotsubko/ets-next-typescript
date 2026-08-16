@@ -13,7 +13,7 @@ const idRoute = await import('@/app/api/projects/[projectId]/players/[id]/route'
 function body(o: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(o) })
 }
-const params = (o: Record<string, string>) => ({ params: Promise.resolve(o) })
+const params = (o: Record<string, string>) => ({ params: Promise.resolve<any>(o) })
 
 describe('players composite route', () => {
   beforeEach(() => vi.clearAllMocks())

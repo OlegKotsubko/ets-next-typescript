@@ -13,7 +13,7 @@ const idRoute = await import('@/app/api/projects/[projectId]/themes/[id]/route')
 function json(o: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(o) })
 }
-const params = (o: Record<string, string>) => ({ params: Promise.resolve(o) })
+const params = (o: Record<string, string>) => ({ params: Promise.resolve<any>(o) })
 
 describe('themes single-active invariant', () => {
   beforeEach(() => vi.clearAllMocks())
