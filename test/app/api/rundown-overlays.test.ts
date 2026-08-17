@@ -14,7 +14,7 @@ const reorder = await import('@/app/api/projects/[projectId]/rundowns/[id]/overl
 function body(o: unknown) {
   return new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(o) })
 }
-const P = (o: Record<string, string>) => ({ params: Promise.resolve(o) })
+const P = (o: Record<string, string>) => ({ params: Promise.resolve<any>(o) })
 
 describe('rundown_overlays routes', () => {
   beforeEach(() => vi.clearAllMocks())
