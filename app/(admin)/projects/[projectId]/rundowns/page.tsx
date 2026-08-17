@@ -1,7 +1,8 @@
 'use client'
 import { use, useState } from 'react'
+import Link from 'next/link'
 import {
-  Box, Typography, Button, Card, CardContent, IconButton, Menu, MenuItem,
+  Box, Typography, Button, Card, CardActionArea, CardContent, IconButton, Menu, MenuItem,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
@@ -13,8 +14,6 @@ import {
 import { getErrorMessage } from '@/lib/errors/getErrorMessage'
 import type { Rundown } from '@/lib/entities/rundowns'
 
-// The overlay editor + controller are rebuilt in a later pass; this page is
-// list / create / rename / delete only.
 export default function RundownsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params)
   const { data: rundowns = [], isError } = useListRundownsQuery(projectId)
@@ -103,19 +102,22 @@ export default function RundownsPage({ params }: { params: Promise<{ projectId: 
             <Card sx={{ position: 'relative' }}>
               <IconButton size="small"
                 aria-label="Rundown actions"
-                onClick={(e) => openMenu(e, r)}
-                sx={{ position: 'absolute', top: 4, right: 4 }}>
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); openMenu(e, r) }}
+                sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1 }}>
                 <MoreVertIcon fontSize="small" />
               </IconButton>
-              <CardContent>
-                <Typography variant="h6">
-                  {r.name}
-                </Typography>
-                <Typography variant="body2"
-                  color="text.secondary">
-                  {new Date(r.createdAt).toLocaleDateString()}
-                </Typography>
-              </CardContent>
+              <CardActionArea component={Link}
+                href={`/projects/${projectId}/rundowns/${r.id}`}>
+                <CardContent>
+                  <Typography variant="h6">
+                    {r.name}
+                  </Typography>
+                  <Typography variant="body2"
+                    color="text.secondary">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
             </Card>
           </Grid>
         ))}
