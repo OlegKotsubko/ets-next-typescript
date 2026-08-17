@@ -63,6 +63,12 @@ export default function RundownEditorPage({ params }: { params: Promise<{ projec
         sx={{ mb: 1 }}>
         ← Rundowns
       </Button>
+      <Button component={Link}
+        href={`/projects/${projectId}/rundowns/${rundownId}/controller`}
+        size="small"
+        sx={{ mb: 1, ml: 1 }}>
+        Controller →
+      </Button>
       <Typography variant="h4"
         sx={{ mb: 3 }}>
         {rundown?.name ?? 'Rundown'}
