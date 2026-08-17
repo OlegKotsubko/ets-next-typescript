@@ -1,5 +1,5 @@
 'use client'
-import { use, useState, useEffect } from 'react'
+import { use, useState } from 'react'
 import Link from 'next/link'
 import {
   Box, Button, Card, CardContent, MenuItem, TextField, Typography, Chip,
@@ -23,16 +23,14 @@ export default function ControllerPage({ params }: { params: Promise<{ projectId
   const [hide] = useHideMutation()
   const [hideAll] = useHideAllMutation()
 
-  const [displayId, setDisplayId] = useState<number | null>(null)
-  useEffect(() => {
-    if (displayId == null && settings?.displayId) setDisplayId(settings.displayId)
-    else if (displayId == null && displays.length) setDisplayId(displays[0].id)
-  }, [settings, displays, displayId])
-
+  // Derived, not synced-via-effect: an explicit pick wins, else the saved
+  // active display, else the first available.
+  const [pickedId, setPickedId] = useState<number | null>(null)
+  const displayId = pickedId ?? settings?.displayId ?? displays[0]?.id ?? null
   const display = displays.find((d) => d.id === displayId) ?? null
 
   async function pickDisplay(id: number) {
-    setDisplayId(id)
+    setPickedId(id)
     await setSettings({ displayId: id })
   }
   async function addDisplay() {
