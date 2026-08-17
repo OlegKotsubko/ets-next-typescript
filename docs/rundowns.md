@@ -12,7 +12,7 @@ Three tables (full column lists in [database.md](./database.md#5-rundowns--overl
 
 `project_id` is denormalized onto `rundown_overlays` so items can be filtered by tournament without joining through `rundowns`.
 
-> **Current state (overlays pass).** The **editor** stores authored widget values **inline** on `rundown_overlays.data.widget`; there is no `rundown_overlay_data` or `display` yet. The controller and the per-display `rundown_overlay_data` (with `is_preview`/`is_air`) are built in the **broadcast pass**, which seeds each display's copy from the authored default. The overlay components, the build-time registry ([titles-system.md](./titles-system.md)), and the editor described below are live; the **controller** section below is the target design, not yet built.
+> **Current state (overlays pass).** The **editor** stores authored widget values **inline** on `rundown_overlays.data.widget`; there is no `rundown_overlay_data` or `display` yet. The controller and the per-display `rundown_overlay_data` (with `is_preview`/`is_air`) are built in the **broadcast pass**, which seeds each display's copy from the authored default. The overlay components, the build-time registry ([titles-system.md](./titles-system.md)), and the editor described below are live — the editor is a **master-detail two-pane** screen (left: overlay listing with preview thumbnails + a color filter; right: a template grid to add or a properties form to configure the selected overlay), reachable by clicking a rundown card in the list. The **controller** section below is the target design, not yet built.
 
 ## Why overlay config is JSONB
 
