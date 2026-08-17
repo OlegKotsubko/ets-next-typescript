@@ -15,6 +15,13 @@
       "when": 1786906650581,
       "tag": "0001_dashing_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786977545101,
+      "tag": "0002_fluffy_blur",
+      "breakpoints": true
     }
   ]
 }

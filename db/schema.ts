@@ -280,3 +280,20 @@ export const rundownOverlays = pgTable('rundown_overlays', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [index('rundown_overlays_rundown_idx').on(t.rundownId, t.order)])
+
+// --- broadcast: displays + per-user settings (broadcast pass) ----------------
+export const displays = pgTable('displays', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid').notNull().unique().$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [index('displays_project_idx').on(t.projectId)])
+
+// Minimal per-user settings: the operator's active display. Broader etalon
+// fields (timezone/delay/channel/atem/observer/is_guest) are roadmap.
+export const settings = pgTable('settings', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  displayId: integer('display_id').references(() => displays.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
