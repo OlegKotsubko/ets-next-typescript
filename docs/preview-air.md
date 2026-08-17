@@ -2,6 +2,8 @@
 
 `/preview/[displayUuid]` and `/air/[displayUuid]` are the **broadcast-output pages** — what OBS/vMix load as browser sources. They render a **transparent 1920×1080 canvas**, are **unauthenticated** (the display UUID is the token), and are driven entirely by **Server-Sent Events** — never a `data` prop, never Redux on the page.
 
+> **Current state (broadcast MVP live).** Built: the in-process Node bus (`lib/broadcast/bus.ts`, keyed `uuid:channel` with a snapshot for replay), the Node SSE route (`/api/broadcast/[displayUuid]/stream`), the transparent `(broadcast)` renderer pages with a layer-sorted set + GSAP enter, and the publisher routes (`preview`/`air`/`hide`/`hide_all`/`live_update`) under `/api/projects/[projectId]/broadcast/[displayId]/`. The take rule (full-screen clears air) and `display_filter` client filtering are in. **Deferred:** video **stinger mixers** / `play_mixer`, `display_change`, match/participant/sponsor **payload collection** (MVP payload = `data.widget` only), thread-widget `event` actions, and `rundown_overlay_data` persistence. The event set below documents the full target; the MVP implements `air`/`preview`/`hide`/`hide_all`/`live_update`.
+
 ## Addressing: displays, not rundowns
 
 Output is addressed by a **display** (see [database.md](./database.md#4-displays--per-user-settings)), not a rundown. A display has a public `uuid`; one tournament/rundown drives **many** displays, and each overlay carries a **`display_filter`** (`''` = all, or `1`–`10`) so a take routes only to matching displays. The operator selects a display in Settings; the controller pushes to that display's channels.
