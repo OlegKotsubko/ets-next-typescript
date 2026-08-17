@@ -168,6 +168,8 @@ export const rundownOverlayData = pgTable('rundown_overlay_data', {
 
 `data.widget` holds the operator-edited field values (validated against the overlay's **widget schema** — see [titles-system.md](./titles-system.md)); the rest of `data` is the collected render payload (current match, participants, sponsors) assembled server-side at preview/air time. See [rundowns.md](./rundowns.md).
 
+> **Implementation note (overlays pass).** The overlays pass ships `rundown_overlays` with an **inline `data` JSONB column** holding the *authored* `data.widget` values, and does **not** yet create `rundown_overlay_data`. The per-`(overlay, display, user)` `rundown_overlay_data` (with `is_preview`/`is_air`) arrives with the **broadcast pass**, seeded from the authored `rundown_overlays.data.widget`. The two-table split above is the target; the single authored copy is the current state.
+
 ## Multi-tenancy: the `project_id` FK isolation pattern
 
 The most important pattern in the codebase. **Read before adding any entity.**

@@ -12,9 +12,15 @@ export default function Scoreboard({
   const right = data.match?.participant_right ?? {}
   return (
     <div className={styles.root}>
-      <span className={styles.team}>{left.name ?? 'TBD'}</span>
-      <span className={styles.score}>{`${left.score ?? 0} : ${right.score ?? 0}`}</span>
-      <span className={styles.team}>{right.name ?? 'TBD'}</span>
+      <span className={styles.team}>
+        {left.name ?? 'TBD'}
+      </span>
+      <span className={styles.score}>
+        {`${left.score ?? 0} : ${right.score ?? 0}`}
+      </span>
+      <span className={styles.team}>
+        {right.name ?? 'TBD'}
+      </span>
     </div>
   )
 }

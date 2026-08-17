@@ -9,8 +9,12 @@ function fmt(seconds: number): string {
 export default function OpeningTimer({ data }: { data: { widget: Data } }) {
   return (
     <div className={styles.root}>
-      <div className={styles.label}>{data.widget.label}</div>
-      <div className={styles.time}>{fmt(Number(data.widget.duration ?? 0))}</div>
+      <div className={styles.label}>
+        {data.widget.label}
+      </div>
+      <div className={styles.time}>
+        {fmt(Number(data.widget.duration ?? 0))}
+      </div>
     </div>
   )
 }

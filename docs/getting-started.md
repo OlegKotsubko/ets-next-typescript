@@ -45,7 +45,7 @@ Apply the Drizzle schema to your Neon dev branch:
 npm run db:migrate
 ```
 
-This creates `users`, `sessions`, `projects` (tournaments), the entity tables (`players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `tags`, `themes`, `assets`, `videos`), `displays`, `settings`, and the content tree (`rundowns`, `rundown_overlays`, `rundown_overlay_data`).
+This creates `users`, `sessions`, `projects` (tournaments), the entity tables (`players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `tags`, `themes`, `assets`, `videos`), and the content tree so far (`rundowns`, `rundown_overlays`). The broadcast pass adds `displays`, `settings`, and the per-display `rundown_overlay_data`.
 
 > If you ever want to inspect the live database, `npm run db:studio` opens Drizzle Studio in your browser.
 

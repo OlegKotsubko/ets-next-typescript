@@ -44,7 +44,7 @@ const houseRules = {
 
 const config = [
   {
-    ignores: ['.next/**', 'coverage/**', 'node_modules/**', '.superpowers/**', 'db/migrations/**'],
+    ignores: ['.next/**', 'coverage/**', 'node_modules/**', '.superpowers/**', 'db/migrations/**', 'lib/overlays/*.generated.ts'],
   },
   ...nextConfig,
   {

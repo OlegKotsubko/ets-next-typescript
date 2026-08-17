@@ -4,7 +4,9 @@ import type { Data } from './model'
 export default function Text({ data }: { data: { widget: Data } }) {
   return (
     <div className={styles.root}>
-      <span className={styles.text}>{data.widget.text}</span>
+      <span className={styles.text}>
+        {data.widget.text}
+      </span>
     </div>
   )
 }

@@ -12,6 +12,8 @@ Three tables (full column lists in [database.md](./database.md#5-rundowns--overl
 
 `project_id` is denormalized onto `rundown_overlays` so items can be filtered by tournament without joining through `rundowns`.
 
+> **Current state (overlays pass).** The **editor** stores authored widget values **inline** on `rundown_overlays.data.widget`; there is no `rundown_overlay_data` or `display` yet. The controller and the per-display `rundown_overlay_data` (with `is_preview`/`is_air`) are built in the **broadcast pass**, which seeds each display's copy from the authored default. The overlay components, the build-time registry ([titles-system.md](./titles-system.md)), and the editor described below are live; the **controller** section below is the target design, not yet built.
+
 ## Why overlay config is JSONB
 
 Overlay field shapes vary wildly (a lower-third vs. a scoreboard vs. a bracket), and there are hundreds of overlays. A table per overlay type would force a migration for every new overlay. Instead, each overlay declares a **widget schema** (its operator-editable fields — `input_type`, `choices`, `default`, `required`, `can_live_update`; see [titles-system.md](./titles-system.md#modelts--the-widget-schema)), and the operator's values land in `rundown_overlay_data.data.widget`, validated against that schema at the API boundary. Adding or editing an overlay needs **no migration**.
