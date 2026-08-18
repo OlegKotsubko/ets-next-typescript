@@ -2,6 +2,7 @@ import {
   pgEnum, pgTable, serial, integer, text, date, timestamp, jsonb, boolean,
   doublePrecision, index, uniqueIndex, primaryKey,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // --- better-auth core tables (drizzleAdapter usePlural: true) ---------------
 // Column set matches better-auth 1.6's generated Drizzle schema. If better-auth
@@ -243,6 +244,9 @@ export const seatings = pgTable('seatings', {
 // --- Rundowns (container; overlays/data land in a later broadcast pass) ------
 export const rundowns = pgTable('rundowns', {
   id: serial('id').primaryKey(),
+  // Public broadcast token: /air/[uuid] & /preview/[uuid] and the SSE bus are
+  // addressed by this unguessable id (replaces the former displays.uuid).
+  uuid: text('uuid').notNull().unique().default(sql`gen_random_uuid()`),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
@@ -280,20 +284,3 @@ export const rundownOverlays = pgTable('rundown_overlays', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [index('rundown_overlays_rundown_idx').on(t.rundownId, t.order)])
-
-// --- broadcast: displays + per-user settings (broadcast pass) ----------------
-export const displays = pgTable('displays', {
-  id: serial('id').primaryKey(),
-  uuid: text('uuid').notNull().unique().$defaultFn(() => crypto.randomUUID()),
-  name: text('name').notNull(),
-  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => [index('displays_project_idx').on(t.projectId)])
-
-// Minimal per-user settings: the operator's active display. Broader etalon
-// fields (timezone/delay/channel/atem/observer/is_guest) are roadmap.
-export const settings = pgTable('settings', {
-  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  displayId: integer('display_id').references(() => displays.id, { onDelete: 'set null' }),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-})

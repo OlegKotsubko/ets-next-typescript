@@ -1,5 +1,6 @@
 export type Rundown = {
   id: number
+  uuid: string
   projectId: number
   userId: string | null
   name: string

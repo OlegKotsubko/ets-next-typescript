@@ -14,8 +14,6 @@ import { rundownsApi } from './apis/rundownsApi'
 import { tagsApi } from './apis/tagsApi'
 import { themesApi } from './apis/themesApi'
 import { rundownOverlaysApi } from './apis/rundownOverlaysApi'
-import { displaysApi } from './apis/displaysApi'
-import { settingsApi } from './apis/settingsApi'
 import { broadcastApi } from './apis/broadcastApi'
 
 const rootReducer = combineReducers({
@@ -33,8 +31,6 @@ const rootReducer = combineReducers({
   [tagsApi.reducerPath]: tagsApi.reducer,
   [themesApi.reducerPath]: themesApi.reducer,
   [rundownOverlaysApi.reducerPath]: rundownOverlaysApi.reducer,
-  [displaysApi.reducerPath]: displaysApi.reducer,
-  [settingsApi.reducerPath]: settingsApi.reducer,
   [broadcastApi.reducerPath]: broadcastApi.reducer,
 })
 
@@ -52,8 +48,6 @@ const entityMiddleware = [
   tagsApi.middleware,
   themesApi.middleware,
   rundownOverlaysApi.middleware,
-  displaysApi.middleware,
-  settingsApi.middleware,
   broadcastApi.middleware,
 ] as any[]
 

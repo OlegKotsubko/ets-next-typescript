@@ -4,9 +4,9 @@ import { useSearchParams } from 'next/navigation'
 import { useBroadcastChannel } from '@/lib/broadcast/useBroadcastChannel'
 import { OverlayCanvas } from '@/components/broadcast/OverlayCanvas'
 
-export default function AirPage({ params }: { params: Promise<{ displayUuid: string }> }) {
-  const { displayUuid } = use(params)
+export default function PreviewPage({ params }: { params: Promise<{ rundownUuid: string }> }) {
+  const { rundownUuid } = use(params)
   const filter = useSearchParams().get('filter')
-  const overlays = useBroadcastChannel(displayUuid, 'air', filter)
+  const overlays = useBroadcastChannel(rundownUuid, 'preview', filter)
   return <OverlayCanvas overlays={overlays} />
 }
