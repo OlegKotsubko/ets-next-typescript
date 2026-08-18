@@ -40,4 +40,4 @@ An operator can:
 2. Enter a tournament from the gallery.
 3. Add players, teams, talents, sponsors.
 4. Build a rundown of overlays and configure them.
-5. Create a display, point OBS at `/air/<displayUuid>`, and run the show from the controller.
+5. Point OBS at the rundown's `/air/<rundownUuid>`, and run the show from the controller.

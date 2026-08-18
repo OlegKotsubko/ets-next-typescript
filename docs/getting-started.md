@@ -45,7 +45,7 @@ Apply the Drizzle schema to your Neon dev branch:
 npm run db:migrate
 ```
 
-This creates `users`, `sessions`, `projects` (tournaments), the entity tables (`players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `tags`, `themes`, `assets`, `videos`), and the content tree so far (`rundowns`, `rundown_overlays`). The broadcast pass adds `displays`, `settings`, and the per-display `rundown_overlay_data`.
+This creates `users`, `sessions`, `projects` (tournaments), the entity tables (`players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `tags`, `themes`, `assets`, `videos`), and the content tree (`rundowns` — with a public `uuid` broadcast address — and `rundown_overlays`). Broadcast output is addressed by the rundown's `uuid`; there is no `displays` or `settings` table (the per-broadcast `rundown_overlay_data` is deferred).
 
 > If you ever want to inspect the live database, `npm run db:studio` opens Drizzle Studio in your browser.
 
@@ -73,10 +73,10 @@ A "project" is a **tournament** (absorbed from the weplay tournament service —
 
 ## 7. (Optional) Hook up OBS
 
-Build a rundown of overlays and create a **display**, then point OBS at that display:
+Build a rundown of overlays, then point OBS at that rundown's public URL:
 
 1. **+** in OBS Sources → **Browser**.
-2. URL: `http://localhost:3000/air/<displayUuid>` (the display's public UUID).
+2. URL: `http://localhost:3000/air/<rundownUuid>` (the rundown's public UUID; append `?filter=N` to route by `display_filter`).
 3. Width/Height: **1920 / 1080**.
 4. **Custom CSS**: leave empty — the active theme's CSS variables are applied automatically.
 5. Check **Refresh browser when scene becomes active**.
@@ -98,7 +98,7 @@ Now taking an overlay to air in the controller will show it in OBS. See [preview
 
 - **`relation "users" does not exist`** — you skipped step 3. Run `npm run db:migrate`.
 - **Login form rejects valid credentials** — `BETTER_AUTH_URL` doesn't match the origin you're loading the app from, or `BETTER_AUTH_SECRET` is empty. See [auth.md](./auth.md#troubleshooting).
-- **`/air/<displayUuid>` shows a blank page in OBS** — open the URL in a regular browser first to check for errors. The most common cause is a display UUID that doesn't exist, or no overlay currently on air for it. See [preview-air.md](./preview-air.md).
+- **`/air/<rundownUuid>` shows a blank page in OBS** — open the URL in a regular browser first to check for errors. The most common cause is a rundown UUID that doesn't exist, or no overlay currently on air for it. See [preview-air.md](./preview-air.md).
 - **Fonts or colors look wrong in OBS** — the tournament has no active theme, so its CSS variables aren't set. Activate a theme. See [projects-system.md](./projects-system.md#theming).
 
 ## Working on media/upload features

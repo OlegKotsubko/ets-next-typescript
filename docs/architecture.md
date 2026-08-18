@@ -2,7 +2,7 @@
 
 ## What ETS does
 
-ETS ("Esports Titles System") produces broadcast graphics — lower-thirds, scoreboards, player cards, sponsor bugs, timers, brackets — for live esports streams. An operator enters a **tournament**, builds a **rundown** of **overlays** (titles), and drives them live onto one or more **displays**; OBS or vMix consumes each display's browser-source URL, which renders the live composition on a transparent 1920×1080 canvas fed by Server-Sent Events.
+ETS ("Esports Titles System") produces broadcast graphics — lower-thirds, scoreboards, player cards, sponsor bugs, timers, brackets — for live esports streams. An operator enters a **tournament**, builds a **rundown** of **overlays** (titles), and drives them live; OBS or vMix consumes the rundown's public browser-source URL (`/air/[rundownUuid]`), which renders the live composition on a transparent 1920×1080 canvas fed by Server-Sent Events.
 
 > **This app is a monolith consolidation of three legacy projects.** See [Legacy provenance](#legacy-provenance) at the bottom. The data model and features below are the **real** system (the React frontend `ets-react-poc` is the authority); the runtime is a **Next.js 16 + Postgres re-platform** of it.
 
@@ -20,11 +20,11 @@ ETS ("Esports Titles System") produces broadcast graphics — lower-thirds, scor
                         │  /api/projects/[id]/…  (Node)│
                         └────┬───────────────────┬─────┘
                              │ Drizzle           │ broadcast event bus
-                             │                   │ (in-process pub/sub, per display+channel)
-                       ┌─────▼─────┐      ┌──────▼──────────────────┐
-                       │   Neon    │      │  SSE endpoints           │
-                       │ Postgres  │      │  /api/broadcast/[display]│
-                       └───────────┘      │    /stream?channel=…     │
+                             │                   │ (in-process pub/sub, per rundown+channel)
+                       ┌─────▼─────┐      ┌──────▼──────────────────────┐
+                       │   Neon    │      │  SSE endpoints               │
+                       │ Postgres  │      │  /api/broadcast/[rundownUuid]│
+                       └───────────┘      │    /stream?channel=…         │
                                           └──────────┬───────────────┘
                                                      │ EventSource
                                   ┌──────────────────┴──────────────────┐
@@ -36,11 +36,11 @@ ETS ("Esports Titles System") produces broadcast graphics — lower-thirds, scor
                                   └──────────── shown in OBS/vMix ────────┘
 ```
 
-Broadcast output is addressed by a **display UUID**, not a rundown id: one tournament/rundown can drive several **filtered displays** (each overlay carries a `display_filter`).
+Broadcast output is addressed by the **rundown's public UUID**: one rundown can feed several **filtered browser sources** (each overlay carries a `display_filter`, matched against the page's `?filter=N`). There is no separate display entity — see the divergence note in [preview-air.md](./preview-air.md).
 
 ## Route map
 
-`[projectId]` identifies the **tournament**; `[displayUuid]` is an unguessable display token (treated as a share link, not a secret).
+`[projectId]` identifies the **tournament**; `[rundownUuid]` is the rundown's unguessable public token (treated as a share link, not a secret).
 
 | Route | Auth | Purpose |
 |---|---|---|
@@ -50,13 +50,13 @@ Broadcast output is addressed by a **display UUID**, not a rundown id: one tourn
 | `/projects/[projectId]/data` | protected | CRUD for the entities absorbed from the backoffice: Players, Teams, Talents, Sponsors, Tags/Disciplines, Assets, Themes, Videos, Brackets/Matches. See [data-entities.md](./data-entities.md). |
 | `/projects/[projectId]/rundowns` | protected | List / create / rename / delete rundowns. |
 | `/projects/[projectId]/rundowns/[rundownId]` | protected | **Overlay editor** — build the rundown's ordered overlay list, configure each. See [rundowns.md](./rundowns.md). |
-| `/projects/[projectId]/rundowns/[rundownId]/controller` | protected | **Live control panel** — preview → air, per-overlay show/hide, live-update, thread widgets. |
+| `/projects/[projectId]/rundowns/[rundownId]/controller` | protected | **Live control panel** — stage → AIR-all, per-overlay show/hide, live-update. |
 | `/projects/[projectId]/midi` | protected | Map MIDI notes → overlay/event actions. Roadmap. See [roadmap.md](./roadmap.md). |
 | `/projects/[projectId]/bluetooth` | protected | Pair BLE heart-rate straps → heart-rate overlays. Roadmap. |
-| `/preview/[displayUuid]` | public | Operator preview channel for a display. See [preview-air.md](./preview-air.md). |
-| `/air/[displayUuid]` | public | On-air channel — OBS/vMix browser source. |
-| `/api/projects/[projectId]/...` | protected | REST endpoints, all `project_id`-scoped. |
-| `/api/broadcast/[displayUuid]/stream?channel=preview\|air` | public | SSE endpoint. |
+| `/preview/[rundownUuid]` | public | Operator preview channel for a rundown. See [preview-air.md](./preview-air.md). |
+| `/air/[rundownUuid]` | public | On-air channel — OBS/vMix browser source (add `?filter=N` to route by `display_filter`). |
+| `/api/projects/[projectId]/...` | protected | REST endpoints, all `project_id`-scoped (broadcast publishers under `…/rundowns/[id]/broadcast/…`). |
+| `/api/broadcast/[rundownUuid]/stream?channel=preview\|air` | public | SSE endpoint. |
 
 > **Overlays = the operator-facing name for a rundown's titles.** The underlying tables are `rundowns` / `rundown_overlays`. "Title" and "overlay" are used interchangeably (see [titles-system.md](./titles-system.md)).
 
@@ -64,8 +64,8 @@ Broadcast output is addressed by a **display UUID**, not a rundown id: one tourn
 
 1. **Author entity data (Data section).** Players, teams, talents, sponsors, brackets/matches, themes are edited through `/api/projects/[projectId]/...` and stored in Postgres, `project_id`-scoped. See [data-entities.md](./data-entities.md), [state-management.md](./state-management.md).
 2. **Build a rundown.** A rundown is an ordered list of `rundown_overlays`; each names an overlay (`model` — the kebab registry key), its `layer`/`color`/`display_filter`/`is_fullscreen`/mixers, and its operator-edited config (`data.widget`). See [rundowns.md](./rundowns.md).
-3. **Drive the show (controller).** Staging an overlay publishes to the **preview** channel; taking it publishes to **air**. The server collects the overlay's live render payload (its `data` serializer pulls in the current match/participants/sponsors) and pushes a `preview`/`air`/`live_update`/`hide`/`play_mixer` event over the in-process bus, keyed by `(displayUuid, channel)`.
-4. **OBS receives a frame update.** Each display's `/air` or `/preview` page subscribes via `EventSource`, filters by `display_filter`, matches `model` to its overlay component, runs the GSAP in/out animation (and any stinger mixer), and renders the payload.
+3. **Drive the show (controller).** Staging an overlay publishes to the **preview** channel; taking publishes to **air**. The publisher route looks up the rundown's uuid and pushes a `preview`/`air`/`live_update`/`hide` event over the in-process bus, keyed by `(rundownUuid, channel)`. The MVP payload is `data.widget` (written back to `rundown_overlays` so edits persist); match/participant/sponsor collection and `play_mixer` are deferred.
+4. **OBS receives a frame update.** The rundown's `/air` or `/preview` page subscribes via `EventSource`, filters the set by `display_filter` against its `?filter=` param, matches `model` to its overlay component, runs the GSAP in/out animation, and renders the payload.
 
 ## Cross-cutting decisions
 

@@ -69,8 +69,8 @@ Per-tournament media — decor/background images, background loops, and stinger 
 | Fonts, static overlay assets | File-system (`public/`) | Static assets |
 | Tournament (title, status, discipline, labels) | Database (`projects`) | Absorbed from TMS |
 | Players, teams, talents, sponsors, matches, themes, assets | Database, `project_id`-scoped | Absorbed entity services; edited in the Data section |
-| Rundowns, overlays, and their per-instance data | Database | Edited in the Overlays editor; `data.widget` is JSONB |
-| Displays, per-user settings | Database | The broadcast outputs and operator preferences |
+| Rundowns, overlays, and their per-instance data | Database | Edited in the Overlays editor; `data.widget` is JSONB. The rundown's public `uuid` is its broadcast address |
+| Live on-air / preview state | In-process bus (transient) | Broadcast is addressed by the rundown `uuid`; no display entity. On-air state is never persisted |
 
 ## Common pitfalls
 

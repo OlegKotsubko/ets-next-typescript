@@ -5,7 +5,9 @@ ETS uses **Redux Toolkit** + **RTK Query**.
 - **RTK Query** handles all server cache. One slice per resource: `playersApi`, `teamsApi`, `talentsApi`, `sponsorsApi`, `matchesApi`/`bracketsApi`, `tagsApi`, `themesApi`, `assetsApi`, `videosApi`, `rundownsApi`, `rundownOverlaysApi`, `midiApi`, plus `userApi` (session/settings). Cache tags mirror the etalon: `User`, `Rundowns`, `Rundown`, `RundownOverlays`, `Midi`, `Seating`, and one per entity — every tag scoped by the tournament (`project_id`).
 - **Redux slices** hold ephemeral UI state (selected overlay in the editor) and the **live composition**: the etalon reduces the two SSE streams into `airsSlice` and `previewsSlice` (a `Map<overlayId, LiveOverlay>` reducer — `air`/`preview` set, `live_update` merge, `hide` delete, `hide_all` clear, `play_mixer` arm a stinger, `display_change` re-scope). The controller derives live/staged highlighting straight from those slices, so a reloaded tab recovers state for free.
 
-The broadcast output pages (`/preview`, `/air`) subscribe to the SSE stream and render a **set** of overlays filtered by `display_filter`; in the monolith they can render directly from the stream (a lean, Redux-free page) rather than through the store — the reducer logic is the same either way.
+> **Current state (broadcast MVP live).** The monolith keeps the reducer **pure** (`lib/broadcast/liveReducer.ts`) but runs it from **React hooks**, not Redux slices: `useBroadcastChannel` drives the `/preview` + `/air` renderer pages, and `useRundownLiveSets` gives the controller the staged/on-air id sets — both subscribe to `/api/broadcast/[rundownUuid]/stream` keyed by the **rundown uuid**. There is no `settingsApi`/`displaysApi` (those tables were removed); `play_mixer` and `display_change` are deferred.
+
+The broadcast output pages (`/preview`, `/air`) subscribe to the SSE stream and render a **set** of overlays filtered by `display_filter` (against the page's `?filter=` param); in the monolith they render directly from the stream (a lean, Redux-free page) — the reducer logic is the same either way.
 
 ## Store setup
 

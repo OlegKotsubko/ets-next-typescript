@@ -13,7 +13,7 @@ This folder is the single source of truth for ETS architecture, conventions, and
 ## Reference
 
 - [auth.md](./auth.md) — username + password session cookie, login flow, guest users, protected routes.
-- [database.md](./database.md) — Drizzle schema, tournaments, the `project_id` isolation pattern, displays/settings, the rundown→overlay→data tree.
+- [database.md](./database.md) — Drizzle schema, tournaments, the `project_id` isolation pattern, rundown broadcast addressing (the rundown `uuid`), the rundown→overlay→data tree.
 - [data-entities.md](./data-entities.md) — CRUD entity reference (Players, Teams, Talents, Sponsors, Matches/Brackets, Tags, Themes, Assets, Videos).
 - [rundowns.md](./rundowns.md) — the **Overlays** section: rundown/overlay data model, the editor, and the live controller.
 - [preview-air.md](./preview-air.md) — the SSE contract for `/preview` and `/air` (display-addressed); OBS/vMix browser-source setup.

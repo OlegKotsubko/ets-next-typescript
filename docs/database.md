@@ -18,15 +18,15 @@ One `db` instance is fine for the whole app — the HTTP driver creates a fresh 
 
 ## Identity model
 
-The real system (all three legacy projects) keys everything by **integer ids** — tournaments, players, teams, matches, rundowns, overlays, and displays are all integer-pk records from Django `BigAutoField`s or external microservice ids. The monolith **absorbs these entity services as local tables** and keeps integer primary keys to match.
+The real system (all three legacy projects) keys everything by **integer ids** — tournaments, players, teams, matches, rundowns, and overlays are all integer-pk records from Django `BigAutoField`s or external microservice ids. The monolith **absorbs these entity services as local tables** and keeps integer primary keys to match.
 
-The one exception is the **display**, which also carries a public **`uuid`** used to address its broadcast output (`/air/[uuid]`, `/preview/[uuid]`) — an unguessable share-link token separate from its integer pk.
+The one exception is the **rundown**, which also carries a public **`uuid`** used to address its broadcast output (`/air/[uuid]`, `/preview/[uuid]`) — an unguessable share-link token separate from its integer pk. (The etalon put this uuid on a separate `display` entity; the monolith addresses broadcast by the rundown itself — see §4.)
 
 > **Divergence note.** The P0–P5a scaffold used UUID primary keys and a UI-created "projects" model. This doc describes the **corrected** integer-id, tournament-based model (the etalon). Reconciling the built code to it is a follow-up.
 
 ## Schema groups
 
-The full schema lives in `db/schema.ts`. Tables fall into five groups.
+The full schema lives in `db/schema.ts`. Tables fall into the groups below (§4 is broadcast addressing, not a table group — the rundown carries the public uuid).
 
 ### 1. Auth (managed by better-auth)
 
@@ -88,33 +88,11 @@ export const players = pgTable('players', {
 }, (t) => [index('players_project_idx').on(t.projectId)]);
 ```
 
-### 4. Displays + per-user settings
+### 4. Rundown broadcast addressing
 
-A **display** is a broadcast output device. Overlays are routed to displays by `display_filter`; the display's `uuid` is the public address for its `/air` and `/preview` pages.
+Broadcast output is addressed by the **rundown's public `uuid`** (a column on `rundowns`, see §5), not by a separate display entity. `/air/[uuid]` and `/preview/[uuid]` load that rundown's live composition; the SSE bus is keyed by `(rundownUuid, channel)`. Overlays still carry a **`display_filter`** so one rundown can feed several filtered browser sources via `?filter=N` (see [preview-air.md](./preview-air.md)).
 
-```ts
-export const displays = pgTable('displays', {
-  id: serial('id').primaryKey(),
-  projectId: integer('project_id').references(() => projects.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),                        // not unique
-  uuid: uuid('uuid').defaultRandom().notNull().unique(),  // public broadcast address
-});
-
-export const settings = pgTable('settings', {         // one row per user
-  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  displayId: integer('display_id').references(() => displays.id, { onDelete: 'set null' }),  // currently selected
-  timezone: text('timezone').notNull().default('Europe/Berlin'),
-  delay: integer('delay').notNull().default(0),        // stream-delay seconds
-  channel: text('channel'),
-  timeFormat: integer('time_format').notNull().default(24),  // 24 | 12
-  mixer: text('mixer'),                                // default stinger/mixer URL
-  atemIpAddress: text('atem_ip_address'),              // Blackmagic ATEM switcher
-  observer: integer('observer').notNull().default(1),
-  isGuest: boolean('is_guest').notNull().default(false),
-  rundownId: integer('rundown_id').references(() => rundowns.id, { onDelete: 'set null' }),
-});
-```
+> **Divergence from the etalon.** `ets-react-poc` models broadcast output as a `Display` entity (its own uuid; one tournament → many displays; an operator-selected active display, plus a per-user `settings` row holding that selection, timezone, delay, mixer, ATEM ip, `is_guest`, etc.). The monolith **removed the `displays` and `settings` tables** and addresses broadcast by the rundown itself. The etalon's `settings` fields (timezone / delay / channel / mixer / atem / observer / is_guest / rundown) are roadmap — see [roadmap.md](./roadmap.md).
 
 ### 5. Rundowns → overlays → overlay data
 
@@ -123,6 +101,7 @@ The content tree (the monolith's direct ancestor is the Django `Rundown → Rund
 ```ts
 export const rundowns = pgTable('rundowns', {
   id: serial('id').primaryKey(),
+  uuid: text('uuid').notNull().unique().default(sql`gen_random_uuid()`),  // public broadcast address (/air/[uuid], /preview/[uuid])
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
@@ -154,11 +133,14 @@ export const rundownOverlays = pgTable('rundown_overlays', {
   backgroundImage: text('background_image'),
 }, (t) => [index('rundown_overlays_rundown_idx').on(t.rundownId, t.order)]);
 
-// Per (overlay, display, user) runtime state + rendered payload.
+// Per-broadcast runtime overrides + rendered payload — DEFERRED (not built).
+// Live broadcast state is currently transient in the in-process bus; authored
+// widget values live inline on rundown_overlays.data.widget. When this table
+// lands it is keyed per (overlay, user); the etalon's per-display dimension is
+// dropped along with the display entity.
 export const rundownOverlayData = pgTable('rundown_overlay_data', {
   id: serial('id').primaryKey(),
   overlayId: integer('overlay_id').notNull().references(() => rundownOverlays.id, { onDelete: 'cascade' }),
-  displayId: integer('display_id').notNull().references(() => displays.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   data: jsonb('data').$type<{ widget: Record<string, unknown> } & Record<string, unknown>>().notNull().default({ widget: {} }),
   isPreview: boolean('is_preview').notNull().default(false),
@@ -166,9 +148,9 @@ export const rundownOverlayData = pgTable('rundown_overlay_data', {
 });
 ```
 
-`data.widget` holds the operator-edited field values (validated against the overlay's **widget schema** — see [titles-system.md](./titles-system.md)); the rest of `data` is the collected render payload (current match, participants, sponsors) assembled server-side at preview/air time. See [rundowns.md](./rundowns.md).
+Today, authored `data.widget` values live **inline on `rundown_overlays`** and are written back on stage / `live_update` (so edits survive a hide → re-show); the collected render payload (current match, participants, sponsors) and the `rundown_overlay_data` table above are **deferred**. `data.widget` is validated against the overlay's **widget schema** — see [titles-system.md](./titles-system.md) and [rundowns.md](./rundowns.md).
 
-> **Implementation note (overlays pass).** The overlays pass ships `rundown_overlays` with an **inline `data` JSONB column** holding the *authored* `data.widget` values, and does **not** yet create `rundown_overlay_data`. The per-`(overlay, display, user)` `rundown_overlay_data` (with `is_preview`/`is_air`) arrives with the **broadcast pass**, seeded from the authored `rundown_overlays.data.widget`. The two-table split above is the target; the single authored copy is the current state.
+> **Implementation note.** `rundown_overlays` carries an **inline `data` JSONB column** holding the *authored* `data.widget` values, written back on stage / `live_update`. `rundown_overlay_data` is **not** created; live broadcast state (`is_preview`/`is_air`, the collected render payload) is transient in the in-process bus. The two-table split above is the deferred target; the single authored copy is the current state.
 
 ## Multi-tenancy: the `project_id` FK isolation pattern
 
@@ -214,5 +196,5 @@ npm run db:studio      # open Drizzle Studio
 
 - Tables: `snake_case`, plural (`players`, `rundown_overlays`).
 - Columns: `snake_case` in the DB; Drizzle maps to `camelCase` in TS.
-- FK columns: `<entity>_id` (`project_id`, `rundown_id`, `display_id`).
+- FK columns: `<entity>_id` (`project_id`, `rundown_id`, `overlay_id`).
 - Indexes: `<table>_<columns>_idx`. Soft deletes: not used; rely on `ON DELETE CASCADE`.
