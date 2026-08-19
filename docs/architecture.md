@@ -45,9 +45,9 @@ Broadcast output is addressed by the **rundown's public UUID**: one rundown can 
 | Route | Auth | Purpose |
 |---|---|---|
 | `/login` | public | Username + password sign-in (session cookie). See [auth.md](./auth.md). |
-| `/projects` | protected | **Tournament gallery** — list/filter tournaments by status, favourites sidebar. No "create"; tournaments are entered, not authored here. |
+| `/projects` | protected | **Tournament gallery** — list/filter by status, favourites, and **create / edit / delete** tournaments (title, status, `overlayPacks`). |
 | `/projects/[projectId]` | protected | Tournament hub. Workspace links: **Data**, **Overlays**, **MIDI**, **Bluetooth**. |
-| `/projects/[projectId]/data` | protected | CRUD for the entities absorbed from the backoffice: Players, Teams, Talents, Sponsors, Tags/Disciplines, Assets, Themes, Videos, Brackets/Matches. See [data-entities.md](./data-entities.md). |
+| `/projects/[projectId]/data` | protected | CRUD for the entities absorbed from the backoffice: Players, Teams, Talents, Sponsors, Assets, Themes, Videos, Brackets/Matches. See [data-entities.md](./data-entities.md). |
 | `/projects/[projectId]/rundowns` | protected | List / create / rename / delete rundowns. |
 | `/projects/[projectId]/rundowns/[rundownId]` | protected | **Overlay editor** — build the rundown's ordered overlay list, configure each. See [rundowns.md](./rundowns.md). |
 | `/projects/[projectId]/rundowns/[rundownId]/controller` | protected | **Live control panel** — stage → AIR-all, per-overlay show/hide, live-update. |
@@ -71,7 +71,7 @@ Broadcast output is addressed by the **rundown's public UUID**: one rundown can 
 
 Reused across docs; each is detailed in the file noted.
 
-1. **Tournaments (not "projects you create"); overlays are global** ([projects-system.md](./projects-system.md), [database.md](./database.md)). A "project" **is a tournament** — the operator browses/favourites/enters it; there is no Add-Project flow and no `project_mode`/`project_label`. Overlay components are **global**, organized by **discipline (category) / template (widget)** — not per-tournament "packages."
+1. **Tournaments (authored in-app); overlays are global, organized by pack** ([projects-system.md](./projects-system.md), [database.md](./database.md)). A "project" **is a tournament** — the operator browses/favourites/enters it and **creates/edits/deletes** it (title, status, `overlayPacks`); there is no `project_mode`/`project_label`. Overlay components are **global**, organized by **pack (a top-level `overlays/` folder = `category`) / template (widget)**; a tournament's `overlayPacks[]` selects which packs' titles it can use — no discipline, no `general` fallback.
 2. **`project_id` FK isolation, enforced by URL routing** ([database.md](./database.md)). Every entity row has a `project_id` column; every entity route lives under `/api/projects/[projectId]/...`, so scoping is structural and the project id is never trusted from the request body.
 3. **Overlay config is JSONB, validated at the API boundary** ([titles-system.md](./titles-system.md), [rundowns.md](./rundowns.md)). Each overlay's operator-editable fields (a **widget schema**: `input_type`, `choices`, `default`, `required`, `can_live_update`) drive the admin form and validate writes into `rundown_overlays.data.widget`. Adding/editing an overlay needs no migration.
 4. **SSE, not WebSockets, for the live composition** ([preview-air.md](./preview-air.md)). One-way server→client carries `air`/`preview`/`hide`/`live_update`/`play_mixer`/`display_change`. WebSockets are used only for the timer and heart-rate subsystems (roadmap).

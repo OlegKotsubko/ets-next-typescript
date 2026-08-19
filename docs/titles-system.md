@@ -1,6 +1,6 @@
 # Titles / Overlays System
 
-An **overlay** (historically "title") is a React component that renders one broadcast graphic — a lower-third, scoreboard, player card, sponsor bug, timer, bracket. Overlays are **global**, organized by **discipline (category) / template (widget)** (see [projects-system.md](./projects-system.md#overlays-are-global-organized-by-discipline--template)); the same component renders in the operator preview (`/preview`) and on air (`/air`). The etalon ships **277 overlays across 27 disciplines**.
+An **overlay** (historically "title") is a React component that renders one broadcast graphic — a lower-third, scoreboard, player card, sponsor bug, timer, bracket. Overlays are **global**, organized by **pack (a top-level `overlays/` folder = `category`) / template (widget)** (see [projects-system.md](./projects-system.md#overlays-are-global-organized-by-pack--template)); the same component renders in the operator preview (`/preview`) and on air (`/air`). The etalon ships **277 overlays across 27 packs**.
 
 > **Terminology.** "Overlay" and "title" are the same thing. Each overlay's registry key is its kebab-cased **`model`** string (e.g. `ggl-scoreboard`), stored on `rundown_overlays.model` and used to look the component up at render time.
 
@@ -105,7 +105,7 @@ Each overlay ships **GSAP** enter/exit timelines (`animationIn.ts` / `animationO
 
 ## Discovery & registry
 
-Overlays are discovered into a registry keyed by `model`. The etalon uses `require.context` over `overlays/`; the monolith uses **build-time codegen** (a Node script emits static imports), because neither `import.meta.glob` nor `require.context` works under both Turbopack and Vitest. The registry composes each overlay's `{ Component, model, actions, settings }` and is consulted by: the "add overlay" picker (`listOverlays()` filtered by discipline), the API validator (`getOverlayModel()` to validate `data.widget`; `isDeclaredAction()` to reject an unknown thread-widget action), and the broadcast pages (`getOverlay().Component`).
+Overlays are discovered into a registry keyed by `model`. The etalon uses `require.context` over `overlays/`; the monolith uses **build-time codegen** (a Node script emits static imports), because neither `import.meta.glob` nor `require.context` works under both Turbopack and Vitest. The registry composes each overlay's `{ Component, model, actions, settings }` and is consulted by: the "add overlay" picker (`listOverlays(project.overlayPacks)` — `category ∈ overlayPacks`), the API validator (`getOverlayModel()` to validate `data.widget`; `isDeclaredAction()` to reject an unknown thread-widget action), and the broadcast pages (`getOverlay().Component`).
 
 ## Adding a new overlay
 

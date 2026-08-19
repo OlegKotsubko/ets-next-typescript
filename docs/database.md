@@ -40,21 +40,15 @@ A **project is a tournament** the operator enters — not something created in t
 export const tournamentStatus = pgEnum('tournament_status', ['draft', 'upcoming', 'ongoing', 'ended']);
 
 // The workspace calls this the "project"; the URL param is [projectId].
+// Authored in-app: create/edit/delete from the gallery.
 export const projects = pgTable('projects', {
-  id: serial('id').primaryKey(),                       // tournament id (integer, from TMS)
+  id: serial('id').primaryKey(),                       // tournament id (integer)
   title: text('title').notNull(),
-  heroSectionUrl: text('hero_section_url'),            // hero_section — logo/key art URL
   status: tournamentStatus('status').notNull().default('draft'),
-  disciplineId: integer('discipline_id').references(() => tags.id),  // discipline = a tag
+  overlayPacks: text('overlay_packs').array().notNull().default(sql`'{}'::text[]`),  // pack (folder) names
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-// A tournament may carry any number of label tags (labels: [tagId]).
-export const projectTags = pgTable('project_tags', {
-  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
-}, (t) => [primaryKey({ columns: [t.projectId, t.tagId] })]);
 
 // Per-operator favourites (the /projects sidebar).
 export const projectFavourites = pgTable('project_favourites', {
@@ -63,11 +57,11 @@ export const projectFavourites = pgTable('project_favourites', {
 }, (t) => [primaryKey({ columns: [t.projectId, t.userId] })]);
 ```
 
-There is **no** `project_mode`, `project_label` (overlay-package folder), `pictureUrl`, or `eventDate` — those were invented. A tournament's `discipline` decides which overlays apply (see [titles-system.md](./titles-system.md)).
+There is **no** `project_mode`, `project_label`, `pictureUrl`, `eventDate`, hero image, or discipline. A tournament's **`overlayPacks`** (pack/folder names) decides which overlays apply — `category ∈ overlayPacks`, no `general` fallback (see [projects-system.md](./projects-system.md#which-overlays-a-tournament-can-use)). The `tags`/`project_tags` tables were removed.
 
 ### 3. Entity tables (the Data section manages)
 
-Absorbed from the weplay CRUD microservices. Every table carries `project_id` (the tournament) so it is scoped. Field shapes are the etalon's real shapes — see [data-entities.md](./data-entities.md) for the full per-entity reference. Tables: `players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `tags` (disciplines), `themes`, `assets`, `videos`.
+Absorbed from the weplay CRUD microservices. Every table carries `project_id` (the tournament) so it is scoped. Field shapes are the etalon's real shapes — see [data-entities.md](./data-entities.md) for the full per-entity reference. Tables: `players`, `player_photos`, `teams`, `team_logos`, `team_players`, `talents`, `sponsors`, `matches`, `seatings`, `brackets`, `themes`, `assets`, `videos`.
 
 ```ts
 // representative — see data-entities.md for all fields
@@ -78,7 +72,6 @@ export const players = pgTable('players', {
   firstName: text('first_name'),
   lastName: text('last_name'),
   country: text('country'),
-  disciplineId: integer('discipline_id').references(() => tags.id),
   gameId: text('game_id'),
   position: text('position'),
   role: text('role'),
@@ -114,7 +107,7 @@ export const rundownOverlays = pgTable('rundown_overlays', {
   rundownId: integer('rundown_id').notNull().references(() => rundowns.id, { onDelete: 'cascade' }),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }), // denormalized
   model: text('model').notNull(),                      // kebab registry key (e.g. 'ggl-scoreboard')
-  category: text('category'),                          // discipline dir
+  category: text('category'),                          // pack (top-level overlays/ folder)
   template: text('template'),                          // widget dir
   widgetName: text('widget_name').notNull(),           // operator-facing label
   layer: integer('layer').notNull().default(1),        // 1..7 — z-index

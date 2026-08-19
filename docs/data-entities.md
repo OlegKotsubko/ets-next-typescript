@@ -14,8 +14,8 @@ All entities share the patterns:
 ## Conventions
 
 - **`socialLinks`** — every person/team entity carries social links. The operator edits a list of `{ type, link }` rows; they are stored as a `{ type: link }` map (`jsonb`). (This replaces the old open-ended `extra` string-map, which was invented; only Talents keep a small free-text `extra_text`.)
-- **Images are URLs, sometimes typed.** Player and team images are multiple, distinguished by a **photo type**, so they live in child tables (`player_photos`, `team_logos`) rather than a fixed set of columns. Sponsor/talent images and the tournament hero image are single URL fields.
-- **`discipline`** — a foreign key to a `tags` row (see [Tags / Disciplines](#tags--disciplines)); the same tag vocabulary tags tournaments and classifies players/teams.
+- **Images are URLs, sometimes typed.** Player and team images are multiple, distinguished by a **photo type**, so they live in child tables (`player_photos`, `team_logos`) rather than a fixed set of columns. Sponsor/talent images are single URL fields.
+- **No discipline.** There is no `tags`/disciplines vocabulary — it was removed. Tournaments select overlays by `overlayPacks` (see [projects-system.md](./projects-system.md#which-overlays-a-tournament-can-use)); players and teams carry no discipline field.
 
 ## Players
 
@@ -29,7 +29,6 @@ export const players = pgTable('players', {
   firstName: text('first_name'),                       // ≤25
   lastName: text('last_name'),                         // ≤25
   country: text('country'),
-  disciplineId: integer('discipline_id').references(() => tags.id),
   gameId: text('game_id'),                             // alphanumeric in-game id
   position: text('position'),
   role: text('role'),
@@ -57,7 +56,6 @@ export const createPlayerSchema = z.object({
   firstName: z.string().max(25).optional(),
   lastName: z.string().max(25).optional(),
   country: z.string().optional(),
-  disciplineId: z.number().int().optional(),
   gameId: z.string().regex(/^[a-z0-9]*$/i).optional(),
   position: z.string().optional(),
   role: z.string().optional(),
@@ -77,7 +75,6 @@ export const teams = pgTable('teams', {
   name: text('name').notNull(),                        // required, ≥2
   country: text('country'),
   region: text('region'),
-  disciplineId: integer('discipline_id').references(() => tags.id),
   opendotaId: text('opendota_id'),
   socialLinks: jsonb('social_links').$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -112,10 +109,6 @@ Casters / hosts / analysts, from `talent-management-service`: `{ nickname, socia
 
 From `sponsor-management-service`: `{ name, logo (url), video }`. Duplicate names allowed. Rendered by sponsor / sponsor-video overlays.
 
-## Tags / Disciplines
-
-From `tag-management-service`. A tag is the discipline/label vocabulary: `{ id, name, ... }`. Tournaments reference a discipline tag and carry label tags; players and teams reference a discipline tag.
-
 ## Matches & Brackets
 
 From `bracket-manager-service` and `tournament-grid-constructor`. Brackets are a **stored tree**, not generated from a participant count. A match holds two participants (team or player), scores, status, and a seating.
@@ -125,7 +118,7 @@ export const matches = pgTable('matches', {
   id: serial('id').primaryKey(),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   bracketId: integer('bracket_id').references(() => brackets.id, { onDelete: 'set null' }),
-  participantLeftId: integer('participant_left_id'),   // team or player id, per tournament discipline
+  participantLeftId: integer('participant_left_id'),   // team or player id
   participantRightId: integer('participant_right_id'),
   scoreLeft: integer('score_left').notNull().default(0),
   scoreRight: integer('score_right').notNull().default(0),
