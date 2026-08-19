@@ -26,6 +26,18 @@ export const projectsApi = createApi({
       query: (projectId) => `/projects/${projectId}`,
       providesTags: (_r, _e, projectId) => [{ type: 'Project', id: projectId }],
     }),
+    createProject: b.mutation<Project, { title: string; status?: string; overlayPacks?: string[] }>({
+      query: (data) => ({ url: '/projects', method: 'POST', body: data }),
+      invalidatesTags: [{ type: 'Project', id: 'LIST' }],
+    }),
+    updateProject: b.mutation<Project, { projectId: number; data: Partial<{ title: string; status: string; overlayPacks: string[] }> }>({
+      query: ({ projectId, data }) => ({ url: `/projects/${projectId}`, method: 'PATCH', body: data }),
+      invalidatesTags: (_r, _e, { projectId }) => [{ type: 'Project', id: 'LIST' }, { type: 'Project', id: String(projectId) }],
+    }),
+    deleteProject: b.mutation<void, { projectId: number }>({
+      query: ({ projectId }) => ({ url: `/projects/${projectId}`, method: 'DELETE' }),
+      invalidatesTags: [{ type: 'Project', id: 'LIST' }],
+    }),
     setFavourite: b.mutation<void, { projectId: number }>({
       query: ({ projectId }) => ({ url: `/projects/${projectId}/favourite`, method: 'PUT' }),
       invalidatesTags: [{ type: 'Project', id: 'LIST' }],
@@ -38,5 +50,7 @@ export const projectsApi = createApi({
 })
 
 export const {
-  useListProjectsQuery, useGetProjectQuery, useSetFavouriteMutation, useUnsetFavouriteMutation,
+  useListProjectsQuery, useGetProjectQuery,
+  useCreateProjectMutation, useUpdateProjectMutation, useDeleteProjectMutation,
+  useSetFavouriteMutation, useUnsetFavouriteMutation,
 } = projectsApi
