@@ -2,16 +2,21 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  Box, Typography, Card, CardActionArea, CardContent, CardMedia,
-  IconButton, Chip, ToggleButtonGroup, ToggleButton, Alert,
+  Box, Typography, Card, CardActionArea, CardContent,
+  IconButton, Chip, ToggleButtonGroup, ToggleButton, Alert, Button,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import AddIcon from '@mui/icons-material/Add'
 import {
   useListProjectsQuery, useSetFavouriteMutation, useUnsetFavouriteMutation,
+  useCreateProjectMutation, useUpdateProjectMutation, useDeleteProjectMutation,
   type Project,
 } from '@/store/apis/projectsApi'
+import { TournamentFormDialog, type TournamentFormValues } from '@/components/admin/projects/TournamentFormDialog'
 import SignOutButton from './SignOutButton'
 
 const STATUSES = ['all', 'draft', 'upcoming', 'ongoing', 'ended'] as const
@@ -24,10 +29,29 @@ export default function ProjectsGallery({ userEmail }: { userEmail: string }) {
   )
   const [setFavourite] = useSetFavouriteMutation()
   const [unsetFavourite] = useUnsetFavouriteMutation()
+  const [createProject] = useCreateProjectMutation()
+  const [updateProject] = useUpdateProjectMutation()
+  const [deleteProject] = useDeleteProjectMutation()
+
+  // null = closed; { } = create; { id, … } = edit
+  const [editing, setEditing] = useState<{ id?: number; initial?: TournamentFormValues } | null>(null)
 
   function toggleFavourite(p: Project) {
     if (p.isFavourite) unsetFavourite({ projectId: p.id })
     else setFavourite({ projectId: p.id })
+  }
+
+  async function submitForm(data: TournamentFormValues) {
+    if (editing?.id != null) await updateProject({ projectId: editing.id, data })
+    else await createProject(data)
+    setEditing(null)
+  }
+
+  function removeProject(p: Project) {
+    // eslint-disable-next-line no-alert
+    if (window.confirm(`Delete tournament "${p.title}"? This removes its rundowns and data.`)) {
+      deleteProject({ projectId: p.id })
+    }
   }
 
   return (
@@ -37,6 +61,11 @@ export default function ProjectsGallery({ userEmail }: { userEmail: string }) {
           Tournaments
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Button variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setEditing({})}>
+            Add tournament
+          </Button>
           <Typography variant="body2">
             {userEmail}
           </Typography>
@@ -84,25 +113,47 @@ export default function ProjectsGallery({ userEmail }: { userEmail: string }) {
               </IconButton>
               <CardActionArea component={Link}
                 href={`/projects/${p.id}/data`}>
-                {p.heroSectionUrl && (
-                  <CardMedia component="img"
-                    height="140"
-                    image={p.heroSectionUrl}
-                    alt="" />
-                )}
                 <CardContent>
                   <Typography variant="h6">
                     {p.title}
                   </Typography>
-                  <Chip size="small"
-                    label={p.status}
-                    sx={{ mt: 1, textTransform: 'capitalize' }} />
+                  <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                    <Chip size="small"
+                      label={p.status}
+                      sx={{ textTransform: 'capitalize' }} />
+                    {p.overlayPacks.map((pack) => (
+                      <Chip key={pack}
+                        size="small"
+                        variant="outlined"
+                        label={pack} />
+                    ))}
+                  </Box>
                 </CardContent>
               </CardActionArea>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, pb: 1 }}>
+                <IconButton size="small"
+                  aria-label="Edit"
+                  onClick={() => setEditing({ id: p.id, initial: { title: p.title, status: p.status, overlayPacks: p.overlayPacks } })}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small"
+                  aria-label="Delete"
+                  color="error"
+                  onClick={() => removeProject(p)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Card>
           </Grid>
         ))}
       </Grid>
+
+      {editing && (
+        <TournamentFormDialog open
+          initial={editing.initial}
+          onClose={() => setEditing(null)}
+          onSubmit={submitForm} />
+      )}
     </Box>
   )
 }
