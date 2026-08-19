@@ -6,6 +6,7 @@ export type Project = {
   heroSectionUrl: string | null
   status: 'draft' | 'upcoming' | 'ongoing' | 'ended'
   disciplineId: number | null
+  overlayPacks: string[]
   isFavourite: boolean
 }
 

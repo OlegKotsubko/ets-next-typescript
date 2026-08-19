@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { Box, Button, MenuItem, TextField, Typography } from '@mui/material'
-import { listOverlays, getOverlayModel } from '@/lib/overlays/catalog'
+import { listOverlays, listCategories, getOverlayModel } from '@/lib/overlays/catalog'
 import { getOverlayRender } from '@/lib/overlays/render'
 
 // Dev-only harness to eyeball overlays with sample data + GSAP. The real
@@ -21,7 +21,7 @@ const themeVars: React.CSSProperties = {
 }
 
 export default function DevOverlaysPage() {
-  const options = listOverlays()
+  const options = listOverlays(listCategories())
   const [model, setModel] = useState(options[0]?.model ?? '')
   const [nonce, setNonce] = useState(0)
   const stageRef = useRef<HTMLDivElement>(null)

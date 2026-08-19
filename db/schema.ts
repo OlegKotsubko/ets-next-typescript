@@ -76,6 +76,7 @@ export const projects = pgTable('projects', {
   heroSectionUrl: text('hero_section_url'), // hero_section — logo / key art URL
   status: tournamentStatus('status').notNull().default('draft'),
   disciplineId: integer('discipline_id').references(() => tags.id), // discipline = a tag
+  overlayPacks: text('overlay_packs').array().notNull().default(sql`'{}'::text[]`), // top-level overlays/ folder names
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

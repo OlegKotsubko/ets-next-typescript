@@ -21,8 +21,15 @@ const entries: CatalogEntry[] = catalog.map((row) => ({
 
 const byModel = new Map(entries.map((e) => [e.model, e]))
 
-export function listOverlays(discipline?: string): CatalogEntry[] {
-  return entries.filter((e) => e.category === 'general' || (discipline != null && e.category === discipline))
+// Available overlays for a tournament = titles whose pack (top-level overlays/
+// folder = category) is one the tournament references. No 'general' fallback.
+export function listOverlays(packs: string[]): CatalogEntry[] {
+  return entries.filter((e) => packs.includes(e.category))
+}
+// The pack names a tournament can pick from — derived from the folder scan the
+// codegen already baked into the catalog.
+export function listCategories(): string[] {
+  return Array.from(new Set(entries.map((e) => e.category))).sort()
 }
 export function getCatalogEntry(model: string): CatalogEntry | undefined {
   return byModel.get(model)

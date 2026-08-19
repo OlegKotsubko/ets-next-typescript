@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { Box, Button, Card, Typography } from '@mui/material'
 import { listOverlays } from '@/lib/overlays/catalog'
 import { useGetProjectQuery } from '@/store/apis/projectsApi'
-import { useListTagsQuery } from '@/store/apis/tagsApi'
 import { useGetRundownQuery } from '@/store/apis/rundownsApi'
 import {
   useListRundownOverlaysQuery, useCreateRundownOverlayMutation, useUpdateRundownOverlayMutation,
@@ -17,7 +16,6 @@ import { OverlayPropertiesForm } from '@/components/admin/overlays/OverlayProper
 export default function RundownEditorPage({ params }: { params: Promise<{ projectId: string; rundownId: string }> }) {
   const { projectId, rundownId } = use(params)
   const { data: project } = useGetProjectQuery(projectId)
-  const { data: tags = [] } = useListTagsQuery()
   const { data: rundown } = useGetRundownQuery({ projectId, id: Number(rundownId) })
   const { data: overlays = [] } = useListRundownOverlaysQuery({ projectId, rundownId })
   const [createOverlay] = useCreateRundownOverlayMutation()
@@ -25,8 +23,7 @@ export default function RundownEditorPage({ params }: { params: Promise<{ projec
   const [deleteOverlay] = useDeleteRundownOverlayMutation()
   const [reorderOverlays] = useReorderRundownOverlaysMutation()
 
-  const disciplineName = tags.find((t) => t.id === project?.disciplineId)?.name
-  const catalog = listOverlays(disciplineName)
+  const catalog = listOverlays(project?.overlayPacks ?? [])
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [activeColors, setActiveColors] = useState<Set<number>>(new Set())

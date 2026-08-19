@@ -4,9 +4,10 @@ import { listOverlays, getOverlayModel, describeModel, isDeclaredAction } from '
 import { scanOverlayDirs, buildSources } from '@/lib/overlays/codegen'
 
 describe('overlay registry', () => {
-  it('lists general overlays for any discipline', () => {
-    expect(listOverlays().map((e) => e.model)).toContain('general-text')
-    expect(listOverlays('dota-2').map((e) => e.model)).toContain('general-text')
+  it('lists overlays whose pack (category) is referenced', () => {
+    expect(listOverlays(['general']).map((e) => e.model)).toContain('general-text')
+    expect(listOverlays(['dota-2']).map((e) => e.model)).not.toContain('general-text')
+    expect(listOverlays([])).toEqual([])
   })
 
   it('validates data.widget via the overlay model', () => {
