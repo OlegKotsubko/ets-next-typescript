@@ -11,7 +11,6 @@ import { bracketsApi } from './apis/bracketsApi'
 import { matchesApi } from './apis/matchesApi'
 import { projectsApi } from './apis/projectsApi'
 import { rundownsApi } from './apis/rundownsApi'
-import { tagsApi } from './apis/tagsApi'
 import { themesApi } from './apis/themesApi'
 import { rundownOverlaysApi } from './apis/rundownOverlaysApi'
 import { broadcastApi } from './apis/broadcastApi'
@@ -28,7 +27,6 @@ const rootReducer = combineReducers({
   [matchesApi.reducerPath]: matchesApi.reducer,
   [projectsApi.reducerPath]: projectsApi.reducer,
   [rundownsApi.reducerPath]: rundownsApi.reducer,
-  [tagsApi.reducerPath]: tagsApi.reducer,
   [themesApi.reducerPath]: themesApi.reducer,
   [rundownOverlaysApi.reducerPath]: rundownOverlaysApi.reducer,
   [broadcastApi.reducerPath]: broadcastApi.reducer,
@@ -45,7 +43,6 @@ const entityMiddleware = [
   matchesApi.middleware,
   projectsApi.middleware,
   rundownsApi.middleware,
-  tagsApi.middleware,
   themesApi.middleware,
   rundownOverlaysApi.middleware,
   broadcastApi.middleware,

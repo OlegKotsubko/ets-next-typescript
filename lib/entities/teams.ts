@@ -10,7 +10,6 @@ export type Team = {
   name: string
   country: string | null
   region: string | null
-  disciplineId: number | null
   opendotaId: string | null
   socialLinks: Record<string, string>
   logos?: TeamLogo[]
@@ -27,7 +26,6 @@ export const teamsEntityDef: EntityDef<Team> = {
     { name: 'name', label: 'Name', widget: 'text' },
     { name: 'country', label: 'Country', widget: 'text' },
     { name: 'region', label: 'Region', widget: 'text' },
-    { name: 'disciplineId', label: 'Discipline', widget: 'select', optionsFrom: 'tags' },
     { name: 'opendotaId', label: 'OpenDota ID', widget: 'text' },
     { name: 'socialLinks', label: 'Social links', widget: 'social-links' },
     { name: 'logos', label: 'Logos', widget: 'typed-images', photoTypes: LOGO_TYPES },

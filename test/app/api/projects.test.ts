@@ -51,7 +51,7 @@ describe('GET /api/projects (tournaments)', () => {
     expect(res.status).toBe(400)
   })
 
-  it('exposes no POST — tournaments are not created in-app', () => {
-    expect((route as Record<string, unknown>).POST).toBeUndefined()
+  it('exposes POST — tournaments are created in-app', () => {
+    expect(typeof (route as Record<string, unknown>).POST).toBe('function')
   })
 })

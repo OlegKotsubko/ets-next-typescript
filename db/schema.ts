@@ -59,13 +59,7 @@ export const verifications = pgTable('verifications', {
   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
 }, (t) => [index('verifications_identifier_idx').on(t.identifier)])
 
-// --- Disciplines / tags (a shared, GLOBAL vocabulary — not project-scoped) ---
-export const tags = pgTable('tags', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-})
-
-// --- Tournaments (a "project") + labels + favourites -----------------------
+// --- Tournaments (a "project") + favourites --------------------------------
 export const tournamentStatus = pgEnum('tournament_status', ['draft', 'upcoming', 'ongoing', 'ended'])
 
 // The workspace calls this the "project"; the URL param is [projectId]. A
@@ -73,18 +67,11 @@ export const tournamentStatus = pgEnum('tournament_status', ['draft', 'upcoming'
 export const projects = pgTable('projects', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
-  heroSectionUrl: text('hero_section_url'), // hero_section — logo / key art URL
   status: tournamentStatus('status').notNull().default('draft'),
-  disciplineId: integer('discipline_id').references(() => tags.id), // discipline = a tag
   overlayPacks: text('overlay_packs').array().notNull().default(sql`'{}'::text[]`), // top-level overlays/ folder names
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
-
-export const projectTags = pgTable('project_tags', {
-  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
-}, (t) => [primaryKey({ columns: [t.projectId, t.tagId] })])
 
 export const projectFavourites = pgTable('project_favourites', {
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
@@ -99,7 +86,6 @@ export const players = pgTable('players', {
   firstName: text('first_name'),
   lastName: text('last_name'),
   country: text('country'),
-  disciplineId: integer('discipline_id').references(() => tags.id),
   gameId: text('game_id'),
   position: text('position'),
   role: text('role'),
@@ -126,7 +112,6 @@ export const teams = pgTable('teams', {
   name: text('name').notNull(),
   country: text('country'),
   region: text('region'),
-  disciplineId: integer('discipline_id').references(() => tags.id),
   opendotaId: text('opendota_id'),
   socialLinks: jsonb('social_links').$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp('created_at').defaultNow().notNull(),

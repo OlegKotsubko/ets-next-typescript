@@ -8,7 +8,6 @@ const SECTIONS = [
   { slug: 'teams', label: 'Teams' },
   { slug: 'talents', label: 'Talents' },
   { slug: 'sponsors', label: 'Sponsors' },
-  { slug: 'tags', label: 'Disciplines / Tags' },
   { slug: 'themes', label: 'Themes' },
   { slug: 'matches', label: 'Matches' },
   { slug: 'brackets', label: 'Brackets' },

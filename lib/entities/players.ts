@@ -10,7 +10,6 @@ export type Player = {
   firstName: string | null
   lastName: string | null
   country: string | null
-  disciplineId: number | null
   gameId: string | null
   position: string | null
   role: string | null
@@ -30,7 +29,6 @@ export const playersEntityDef: EntityDef<Player> = {
     { name: 'firstName', label: 'First name', widget: 'text' },
     { name: 'lastName', label: 'Last name', widget: 'text' },
     { name: 'country', label: 'Country', widget: 'text' },
-    { name: 'disciplineId', label: 'Discipline', widget: 'select', optionsFrom: 'tags' },
     { name: 'gameId', label: 'Game ID', widget: 'text' },
     { name: 'position', label: 'Position', widget: 'text' },
     { name: 'role', label: 'Role', widget: 'text' },

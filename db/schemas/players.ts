@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { optionalId, optionalDate } from './helpers'
+import { optionalDate } from './helpers'
 
 const photoType = z.enum(['avatar', 'left', 'right', 'roster', 'left_lg', 'right_lg', 'statistics'])
 
@@ -8,7 +8,6 @@ export const createPlayerSchema = z.object({
   firstName: z.string().max(25).optional(),
   lastName: z.string().max(25).optional(),
   country: z.string().optional(),
-  disciplineId: optionalId,
   gameId: z.string().regex(/^[a-z0-9]*$/i).optional(),
   position: z.string().optional(),
   role: z.string().optional(),

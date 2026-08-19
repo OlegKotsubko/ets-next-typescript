@@ -3,9 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 export type Project = {
   id: number
   title: string
-  heroSectionUrl: string | null
   status: 'draft' | 'upcoming' | 'ongoing' | 'ended'
-  disciplineId: number | null
   overlayPacks: string[]
   isFavourite: boolean
 }

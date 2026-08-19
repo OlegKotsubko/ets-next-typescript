@@ -3,11 +3,15 @@ import * as schema from '@/db/schema'
 
 describe('schema', () => {
   it('exposes the corrected tournament + entity tables', () => {
-    for (const t of ['projects', 'projectTags', 'projectFavourites', 'tags', 'players',
+    for (const t of ['projects', 'projectFavourites', 'players',
       'playerPhotos', 'teams', 'teamLogos', 'teamPlayers', 'talents', 'sponsors', 'videos',
       'assets', 'themes', 'brackets', 'matches', 'seatings', 'rundowns']) {
       expect(schema).toHaveProperty(t)
     }
+  })
+  it('drops the tags/disciplines model', () => {
+    expect(schema).not.toHaveProperty('tags')
+    expect(schema).not.toHaveProperty('projectTags')
   })
   it('keeps the four better-auth tables', () => {
     for (const t of ['users', 'sessions', 'accounts', 'verifications']) {
@@ -18,7 +22,9 @@ describe('schema', () => {
     const cols = Object.keys(schema.projects)
     expect(cols).toContain('title')
     expect(cols).toContain('status')
-    expect(cols).toContain('disciplineId')
+    expect(cols).toContain('overlayPacks')
+    expect(cols).not.toContain('disciplineId')
+    expect(cols).not.toContain('heroSectionUrl')
     expect(cols).not.toContain('mode')
     expect(cols).not.toContain('label')
   })

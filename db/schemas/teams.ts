@@ -1,11 +1,9 @@
 import { z } from 'zod'
-import { optionalId } from './helpers'
 
 export const createTeamSchema = z.object({
   name: z.string().min(2).max(120),
   country: z.string().optional(),
   region: z.string().optional(),
-  disciplineId: optionalId,
   opendotaId: z.string().optional(),
   socialLinks: z.record(z.string(), z.string()).default({}),
   logos: z.array(z.object({
